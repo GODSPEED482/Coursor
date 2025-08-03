@@ -2,9 +2,13 @@ name: Frontend CI/CD
 
 on:
   push:
+    path:
+      - 'client/**'  
     branches:
-      - '**'   # listen to all branches while debugging
+      - '**'   
   pull_request:
+    path:
+      - 'client/**'
     branches:
       - '**'
 

@@ -1,15 +1,18 @@
-const nextJest = require('next/jest');
+const nextJest = require('next/jest')
 
 const createJestConfig = nextJest({
-  dir: './', // Path to Next.js app
-});
+  dir: './',
+})
 
 const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  testEnvironment: 'jsdom',
+  testEnvironment: 'node', // use "node" for NextAuth backend tests
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
   },
-};
+  transformIgnorePatterns: [
+    '/node_modules/(?!jose|next-auth|@next-auth).+\\.js$', 
+  ],
+}
 
-module.exports = createJestConfig(customJestConfig);
+module.exports = createJestConfig(customJestConfig)
