@@ -2,6 +2,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import "./globals.css"; 
 import Provider from "../app/provider" 
+import Sidebar from "../components/ui/Sidebar"; // Importing Loading component for potential use
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -26,12 +27,12 @@ export default function RootLayout({ children }) {
       
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
           >
-            <Provider>
-              {children}
+            <Provider> 
+              {children} 
             </Provider>
         </ThemeProvider> 
       </body>
