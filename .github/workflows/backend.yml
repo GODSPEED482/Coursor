@@ -30,6 +30,3 @@ jobs:
 
       - name: Run Jest tests
         run: npm test
-
-      - name: Build Node.js app
-        run: npm run build
