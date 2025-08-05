@@ -12,22 +12,56 @@ const Sidebar = () => {
   const [loading, setLoading] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
+  const handleSignin = async () => {
+    try {
+      await axios.post(
+        "http://localhost:5000/api/auth/login",
+        {
+          name: session?.user?.name,
+          email: session?.user?.email,
+          image: session?.user?.image,
+        },
+        { withCredentials: true }
+      );
+    } catch (error) {
+      console.error("Signin failed:", error);
+    }
+  };
+
   useEffect(() => {
     if (session) {
-      setLoading(true);
-      axios
-        .get("/api/courses")
-        .then((res) => setCourses(res.data.courses || []))
-        .catch(() => setCourses([]))
-        .finally(() => setLoading(false));
+      handleSignin(); 
     }
   }, [session]);
+ 
+  useEffect(() => {
+    const fetchCourses = async () => {
+      if (!session) return;
 
+      setLoading(true);
+      try {
+        const response = await axios.post(
+          "http://localhost:5000/api/course/get",
+          {
+            user: session.user,
+          },
+          { withCredentials: true },
+        );
+        console.log("Fetched courses:", response.data);
+        setCourses(response.data.courses || []);
+      } catch (error) {
+        console.error("Error fetching courses:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCourses();
+  }, [session]);
   return (
     <aside
       className={`h-screen ${
-        collapsed ? "w-22" : "w-72"
-      } bg-zinc-50 dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 
+        collapsed ? "w-20" : "w-72"
+      } bg-zinc-50 dark:bg-zinc-900 relative border-r border-zinc-200 dark:border-zinc-800 
       flex flex-col p-4 shadow-sm transition-all duration-300 ease-in-out 
       text-zinc-900 dark:text-white`}
     >
@@ -37,7 +71,7 @@ const Sidebar = () => {
           onClick={() => setCollapsed((prev) => !prev)}
           className="p-3 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 transition"
         >
-          <Menu className="h-5 w-5 " />
+          <Menu className="h-5 w-5" />
         </button>
       </div>
 
@@ -54,7 +88,7 @@ const Sidebar = () => {
         ) : (
           <div
             className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 
-          flex items-center justify-center text-white font-bold"
+            flex items-center justify-center text-white font-bold"
           >
             {session?.user?.name?.charAt(0) || "G"}
           </div>
@@ -75,10 +109,7 @@ const Sidebar = () => {
       <div className="border-t border-zinc-200 dark:border-zinc-700 my-3"></div>
 
       {/* Courses Section */}
-      <div
-        className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-300 
-      scrollbar-track-transparent pr-2"
-      >
+      <div className="flex-1 overflow-y-auto pr-2">
         {status === "loading" ? (
           <p className="text-zinc-400 text-sm">Loading...</p>
         ) : session ? (
@@ -97,12 +128,14 @@ const Sidebar = () => {
                 {courses.map((course) => (
                   <li
                     key={course.id}
-                    className="flex items-center gap-2 px-3 py-2 text-sm 
-                    text-zinc-700 dark:text-white rounded-lg hover:bg-zinc-100 
-                    dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                    className="flex items-center gap-3 px-3 py-2 text-sm 
+                      text-zinc-700 dark:text-white rounded-lg hover:bg-zinc-100 
+                      dark:hover:bg-zinc-800 transition cursor-pointer"
                   >
                     <BookOpen className="h-4 w-4 text-zinc-500 dark:text-zinc-300" />
-                    {!collapsed && course.title}
+                    {!collapsed && (
+                      <span className="truncate">{course.title}</span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -114,7 +147,7 @@ const Sidebar = () => {
           </>
         ) : (
           <p className="text-zinc-400 dark:text-zinc-300 text-sm">
-            {collapsed ? "" : "Your courses will appear here after login."}
+            {!collapsed && "Your courses will appear here after login."}
           </p>
         )}
       </div>
