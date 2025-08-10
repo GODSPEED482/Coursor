@@ -47,7 +47,7 @@ const Sidebar = () => {
           },
           { withCredentials: true },
         );
-        console.log("Fetched courses:", response.data);
+        // console.log("Fetched courses:", response.data);
         setCourses(response.data.courses || []);
       } catch (error) {
         console.error("Error fetching courses:", error);

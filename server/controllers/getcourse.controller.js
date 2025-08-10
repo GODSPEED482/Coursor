@@ -1,7 +1,6 @@
 const User = require("../models/user.model");
 async function getCourseController(req, res) {
   try {
-    console.log("Incoming body:", req.body); // 👈 debug
     const { user } = req.body;
 
     if (!user || !user.email) {

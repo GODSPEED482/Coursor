@@ -24,6 +24,7 @@ async function handleSubmit() {
     if (res.data && res.data.success) {
       setcourse("");
       router.push("/course");
+      
     } else {
       console.error("Failed to create course:", res.data?.message || res.statusText);
     }
