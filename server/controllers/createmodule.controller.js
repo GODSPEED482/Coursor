@@ -4,14 +4,17 @@ const generateModules = require("../utils/ai.helper");
 
 const createModuleController = async (req, res) => {
   try {
-    const course_title = req.body.title;
+    const course_id = req.body.id;
 
-    const course = await Course.findOne({ title: course_title });
+    const course = await Course.findOne({ _id: course_id });
     if (!course) {
       return res.status(404).json({ message: "Course not found" });
     }
-
-  
+    if(course.modules.length>0)
+      return res.status(200).json({
+        message: "Modules already created for this course",
+        course: course,
+      });  
  
     const modules = await generateModules(course_title);
 

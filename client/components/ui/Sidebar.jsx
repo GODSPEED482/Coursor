@@ -5,8 +5,9 @@ import axios from "axios";
 import Image from "next/image";
 import { Button } from "./button";
 import { LogOut, LogIn, BookOpen, Menu } from "lucide-react";
-
+import {useRouter} from "next/navigation";
 const Sidebar = () => {
+  const router = useRouter();
   const { data: session, status } = useSession();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -37,8 +38,7 @@ const Sidebar = () => {
   useEffect(() => {
     const fetchCourses = async () => {
       if (!session) return;
-
-      setLoading(true);
+      
       try {
         const response = await axios.post(
           "http://localhost:5000/api/course/get",
@@ -51,9 +51,7 @@ const Sidebar = () => {
         setCourses(response.data.courses || []);
       } catch (error) {
         console.error("Error fetching courses:", error);
-      } finally {
-        setLoading(false);
-      }
+      }  
     };
     fetchCourses();
   }, [session]);
@@ -61,7 +59,7 @@ const Sidebar = () => {
     <aside
       className={`h-screen ${
         collapsed ? "w-20" : "w-72"
-      } bg-zinc-50 dark:bg-zinc-900 relative border-r border-zinc-200 dark:border-zinc-800 
+      } bg-zinc-950 relative border-r border-zinc-800 
       flex flex-col p-4 shadow-sm transition-all duration-300 ease-in-out 
       text-zinc-900 dark:text-white`}
     >

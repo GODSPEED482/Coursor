@@ -5,7 +5,9 @@ import React, { useEffect } from "react";
 import axios from "axios";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 const page = () => {
+  const router = useRouter()
   const { data: session } = useSession();
   const [courses, setCourses] = useState([]);
   useEffect(() => {
@@ -26,9 +28,12 @@ const page = () => {
     };
     fetchCourses();
   }, [session]);
+  const viewCourse = async (course) => {  
+      router.push(`course/${course._id}`);
+  }
   return (
     <div
-      className="flex flex-col p-4 h-screen bg-zinc-800 text-white"
+      className="flex flex-col p-4 h-screen bg-zinc-900 text-white"
     >
       <div className="flex flex-wrap gap-4 m-8 justify-start"
         style={{ rowGap: '2rem', columnGap: '2rem' }}>
@@ -44,7 +49,7 @@ const page = () => {
                 This is a course about {course?.title}
               </p>
             </CardContent>
-            <Button>View Course</Button>
+            <Button onClick = {()=>viewCourse(course)}>View Course</Button>
           </Card>
         ))}
       </div>

@@ -16,11 +16,13 @@ async function generateModules( course_title ) {
         - "description": A concise explanation of the lesson (string, max 30 words).
       Return ONLY a valid JSON array of these module objects.
       Do not include any extra text, commentary, or formatting — just the JSON.
+      Make sure the JSON is well-formed and valid.
+      There is no limit on the number of modules, but make sure they are relevant to the course title.
     `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [{ role: "user", parts: [{ text: prompt }] }], // Added the required contents format
+        model: "gemini-2.5-flash",
+        contents: [{ role: "user", parts: [{ text: prompt }] }], // Added the required contents format
       generationConfig: {
         temperature: 0.1,
         responseMimeType: "application/json", 

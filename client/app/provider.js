@@ -6,7 +6,7 @@ import React from 'react'
 
 const Provider = ({ children }) => {
   return (
-    <SessionProvider>{children}</SessionProvider>
+    <SessionProvider refetchInterval={10}>{children}</SessionProvider>
   );
 };
 
