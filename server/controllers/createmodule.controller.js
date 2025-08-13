@@ -16,7 +16,7 @@ const createModuleController = async (req, res) => {
         course: course,
       });  
  
-    const modules = await generateModules(course_title);
+    const modules = await generateModules(course.title);
 
     if (modules.length) {
         course.modules = [];  

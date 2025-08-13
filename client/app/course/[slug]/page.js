@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import axios from "axios";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardHeader,
@@ -32,7 +33,7 @@ const page = () => {
     }
     createModule();
   }, []);
-
+  const router = useRouter();
   return (
     <div className="min-h-screen bg-zinc-900 text-zinc-50 p-8">
       {courses ? (
@@ -70,6 +71,7 @@ const page = () => {
                       variant="secondary"
                       size="sm"
                       className="bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
+                      onClick={()=>{router.push(`/module/${module._id}`)}}
                     >
                       Learn →
                     </Button>

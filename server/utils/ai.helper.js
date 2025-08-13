@@ -10,7 +10,7 @@ async function generateModules( course_title ) {
   try {
     const prompt = `
       You are an expert course designer.
-      Generate exactly 6 course modules for the course titled "${course_title}".
+      Generate anything from [5-10] modules for the course titled "${course_title}".
       Each module should be an object with:
         - "title": Lesson Title (string, max 10 words).
         - "description": A concise explanation of the lesson (string, max 30 words).

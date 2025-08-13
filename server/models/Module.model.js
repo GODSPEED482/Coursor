@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-
+const Lesson = require("./Lesson.model");
 const moduleSchema = new mongoose.Schema({
     title : {
         type : String,
@@ -7,7 +7,8 @@ const moduleSchema = new mongoose.Schema({
     },
     description : {
         type : String,
-    }
+    },
+    lessons : Lesson.schema, 
 })
 
 const Moodule = mongoose.model("Module", moduleSchema);

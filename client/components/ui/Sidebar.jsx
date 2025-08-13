@@ -5,7 +5,7 @@ import axios from "axios";
 import Image from "next/image";
 import { Button } from "./button";
 import { LogOut, LogIn, BookOpen, Menu } from "lucide-react";
-import {useRouter} from "next/navigation";
+import { useRouter } from "next/navigation";
 const Sidebar = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -31,27 +31,27 @@ const Sidebar = () => {
 
   useEffect(() => {
     if (session) {
-      handleSignin(); 
+      handleSignin();
     }
   }, [session]);
- 
+
   useEffect(() => {
     const fetchCourses = async () => {
       if (!session) return;
-      
+
       try {
         const response = await axios.post(
           "http://localhost:5000/api/course/get",
           {
             user: session.user,
           },
-          { withCredentials: true },
+          { withCredentials: true }
         );
         // console.log("Fetched courses:", response.data);
         setCourses(response.data.courses || []);
       } catch (error) {
         console.error("Error fetching courses:", error);
-      }  
+      }
     };
     fetchCourses();
   }, [session]);
@@ -103,9 +103,6 @@ const Sidebar = () => {
         )}
       </div>
 
-      {/* Divider */}
-      <div className="border-t border-zinc-200 dark:border-zinc-700 my-3"></div>
-
       {/* Courses Section */}
       <div className="flex-1 overflow-y-auto pr-2">
         {status === "loading" ? (
@@ -113,9 +110,13 @@ const Sidebar = () => {
         ) : session ? (
           <>
             {!collapsed && (
-              <div className="text-xs font-medium text-zinc-500 dark:text-zinc-300 uppercase mb-3 tracking-wide">
+              <Button
+                variant="outline"
+                className="w-full mb-4"
+                onClick={() => router.push("/course")}
+              >
                 Your Courses
-              </div>
+              </Button>
             )}
             {loading ? (
               <p className="text-zinc-400 dark:text-zinc-300 text-sm">
@@ -132,7 +133,12 @@ const Sidebar = () => {
                   >
                     <BookOpen className="h-4 w-4 text-zinc-500 dark:text-zinc-300" />
                     {!collapsed && (
-                      <span className="truncate">{course.title}</span>
+                      <span
+                        className="truncate"
+                        onClick={() => router.push(`/course/${course._id}`)}
+                      >
+                        {course.title}
+                      </span>
                     )}
                   </li>
                 ))}

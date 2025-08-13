@@ -7,49 +7,48 @@ import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 const page = () => {
-  const router = useRouter()
+  const router = useRouter();
   const { data: session } = useSession();
   const [courses, setCourses] = useState([]);
-  useEffect(() => {
-    const fetchCourses = async () => {
-      if (!session) return;
-      try {
-        const response = await axios.post(
-          "http://localhost:5000/api/course/get",
-          {
-            user: session.user,
-          },
-          { withCredentials: true }
-        ); 
-        setCourses(response.data.courses || []);
-      } catch (error) {
-        console.error("Error fetching courses:", error);
-      } 
-    };
-    fetchCourses();
-  }, [session]);
-  const viewCourse = async (course) => {  
-      router.push(`course/${course._id}`);
-  }
+    useEffect(() => {
+      async function fetchCourses() {
+        if (!session) return;
+        try {
+          const response = await axios.post(
+            "http://localhost:5000/api/course/get",
+            {
+              user: session.user,
+            },
+            { withCredentials: true }
+          );
+          setCourses(response.data.courses || []);
+        } catch (error) {
+          console.error("Error fetching courses:", error);
+        }
+      }
+      fetchCourses();
+    }, [session]);
+  const viewCourse = async (course) => {
+    router.push(`course/${course._id}`);
+  };
   return (
-    <div
-      className="flex flex-col p-4 h-screen bg-zinc-900 text-white"
-    >
-      <div className="flex flex-wrap gap-4 m-8 justify-start"
-        style={{ rowGap: '2rem', columnGap: '2rem' }}>
+    <div className="flex flex-col p-4 h-screen bg-zinc-900 text-white">
+      <div className="flex flex-wrap gap-8 m-8 justify-start">
         {courses.map((course, index) => (
-          <Card key={index} className="shadow-lg p-4 rounded-lg h-fill" style={{ flex: '1 0 21%', maxWidth: '23%' }}>
+          <Card
+            key={index}
+            className="shadow-lg p-4 rounded-lg h-full flex flex-col"
+            style={{ flex: "1 0 21%", maxWidth: "23%" }}
+          >
             <CardTitle>
               <h1 className="text-xl font-semibold text-white ml-6 mt-2">
                 {course?.title}
               </h1>
-            </CardTitle>
-            <CardContent>
-              <p className="text-sm text-white/80">
-                This is a course about {course?.title}
-              </p>
-            </CardContent>
-            <Button onClick = {()=>viewCourse(course)}>View Course</Button>
+            </CardTitle> 
+ 
+            <div className="mt-auto w-full flex justify-end">
+              <Button onClick={() => viewCourse(course)}>View Course</Button>
+            </div>
           </Card>
         ))}
       </div>
