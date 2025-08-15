@@ -1,12 +1,13 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "main": "index.js", 
+  "main": "index.js",
   "type": "commonjs",
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "jest"
+    "test": "jest",
+    "prepare": "husky"
   },
   "keywords": [],
   "author": "",
@@ -24,6 +25,7 @@
     "openai": "^5.12.2"
   },
   "devDependencies": {
+    "husky": "^9.1.7",
     "jest": "^30.0.5"
   }
 }
