@@ -1,5 +1,5 @@
 const Course = require("../models/Course.model");
-const User = require("../models/user.model");
+const User = require("../models/User.model");
 
 async function createCourseController(req, res) {
   try {
