@@ -16,6 +16,7 @@ async function generateModules( course_title ) {
         - "description": A concise explanation of the lesson (string, max 30 words).
       Return ONLY a valid JSON array of these module objects.
       Do not include any extra text, commentary, or formatting — just the JSON.
+      The CODE BLOCK should be formatted 
       Make sure the JSON is well-formed and valid.
       There is no limit on the number of modules, but make sure they are relevant to the course title.
     `;

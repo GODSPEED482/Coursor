@@ -126,7 +126,7 @@ const Sidebar = () => {
               <ul className="space-y-1">
                 {courses.map((course) => (
                   <li
-                    key={course.id}
+                    key={course._id}
                     className="flex items-center gap-3 px-3 py-2 text-sm 
                       text-zinc-700 dark:text-white rounded-lg hover:bg-zinc-100 
                       dark:hover:bg-zinc-800 transition cursor-pointer"

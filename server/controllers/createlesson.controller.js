@@ -9,7 +9,7 @@ async function createLessonController(req,res){
             message: "Module not found"
         })
     }
-    if(module.lessons?.length ){
+    if(module.lessons != null){
         return res.status(201).json({
             message: "Module already has lessons",
             module: module
