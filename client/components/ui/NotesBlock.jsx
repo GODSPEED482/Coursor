@@ -2,7 +2,7 @@ import ReactMarkdown from "react-markdown";
 
 const NotesBlock = ({ notes }) => (
   <div className="p-6">
-    <h2 className="text-3xl font-bold mb-6">Notes</h2>
+    <h2 className="text-2xl font-semibold mb-6">Notes</h2>
 
     <div className="text-lg leading-relaxed space-y-4">
       <ReactMarkdown

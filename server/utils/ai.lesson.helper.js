@@ -12,16 +12,16 @@ async function generateLesson(module_title) {
       Each module should be an object with:
         - "title": Lesson Title (string, max 10 words).
         - "content":
-        an array of :
+        an object of :
         1. A detailed explanation of the lesson.(Notes)
-        2. Youtube video link (string).
+        2. (3/4) Reference Websit Link (string) like geekforgeeks.
         3. (4/5) MCQ with 4 options (A, B, C, D) and the correct answer.
-      Each object in the array MUST strictly follow this schema:
+      Each key-value pair in the object MUST strictly follow this schema:
         {
           "title": "Lesson Title (string, max 10 words)",
-          "content": [
+          "content": {
             "notes" : "Detailed explanation of the lesson (Notes)",
-            "link" : "YouTube video link (string)",
+            "links" : ["Link1","Link2"..],
             [
               {
                 "question": "MCQ Question Number 1",
@@ -29,9 +29,11 @@ async function generateLesson(module_title) {
                 "answer": "A"
               }
             ]
-          ]
+          }
         }
-      Return ONLY a valid JSON lesson object with title and array of content.
+      Return ONLY a valid JSON lesson object with title and object of content.
+      There is no limit on length of notes and content , it can be as large as possible.
+      It needs to cover all topics effectively.
       Do not include any extra text, commentary, or formatting — just the JSON.
       Make sure the JSON is well-formed and valid. Donot have to give JSON formatting, just the JSON object.
       There is no limit on the number of modules, but make sure they are relevant to the course title.

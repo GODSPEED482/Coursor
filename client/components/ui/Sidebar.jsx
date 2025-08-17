@@ -111,7 +111,7 @@ const Sidebar = () => {
           <>
             {!collapsed && (
               <Button
-                variant="outline"
+                variant="secondary"
                 className="w-full mb-4"
                 onClick={() => router.push("/course")}
               >

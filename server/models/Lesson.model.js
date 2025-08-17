@@ -5,7 +5,7 @@ const LessonSchema = new mongoose.Schema({
         required: true
     },
     content : {
-        type: [mongoose.Schema.Types.Mixed],
+            type: mongoose.Schema.Types.Mixed,
          required: true
     }
 })
