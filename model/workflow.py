@@ -1,8 +1,8 @@
 import json
 from dotenv import load_dotenv
 load_dotenv()
-from langchain.schema.runnable import RunnableParallel, RunnableLambda
-from context import analyzer_prompt, CourseDetails, UserDetails, clarifier_prompt, Questions, get_unspecified_properties
+from langchain.schema.runnable import RunnableParallel, RunnableLambda, RunnablePassthrough
+from interrogator_utils import analyzer_prompt, CourseDetails, clarifier_prompt, Questions, get_unspecified_properties, Question, context_modifier_prompt
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 llm = ChatGoogleGenerativeAI(
@@ -12,35 +12,82 @@ llm = ChatGoogleGenerativeAI(
 
 
 
-res=llm.invoke("What is todays date?")
-print(res.content)
+# res=llm.invoke("What is todays date?")
+# print(res.content)
 
+# LLM
 
-course_context_llm = llm.with_structured_output(
+course_llm = llm.with_structured_output(
     CourseDetails
 )
-user_context_llm = llm.with_structured_output(
-    UserDetails
-)
-clarify_llm = llm.with_structured_output(
+question_llm = llm.with_structured_output(
     Questions
 )
 
-analyzer_chain = (
-    analyzer_prompt 
-    | course_context_llm 
-    | RunnableLambda(get_unspecified_properties)
-    | (lambda x: {"props": str(x)} )
-    | clarifier_prompt
-    | clarify_llm
+# Utility Function
+
+def modify(
+        course_details: CourseDetails, 
+        unspecified_property: str, 
+        user_response: str
+    ) -> CourseDetails:
+        context_modifier_chain = context_modifier_prompt | course_llm
+        return context_modifier_chain.invoke({
+            "description": str(description),
+            "course_details": str(course_details),
+            "unspecified_property": unspecified_property,
+            "user_response": user_response
+        }) #type: ignore
+
+def ask_questions(questions: list[Question], course_details: CourseDetails) -> CourseDetails:
+
+    for question in questions:
+        response = input(f"{question.clarification_question}\n")
+        course_details = modify(
+            course_details=course_details,
+            unspecified_property=question.unspecified_property,
+            user_response=response
+        )
+    
+    return course_details
+
+# Chains
+
+course_analyzer_chain = analyzer_prompt | course_llm
+
+clarifier_chain = (
+    RunnableLambda(get_unspecified_properties)
+    | (lambda x : {"props" : str(x), "context": str(description)})
+    | clarifier_prompt 
+    | question_llm
+    | (lambda x: x.question_set)
 )
+
+
+# Workflows
+
+course_context_workflow = (
+    course_analyzer_chain 
+    | RunnableParallel({
+        "questions": clarifier_chain,
+        "course_details": RunnablePassthrough()
+    })
+    | RunnableLambda((lambda x: ask_questions(x["questions"], x["course_details"])))#type: ignore
+)
+
+
+
+description = { 
+    name : field.description
+    for name, field in CourseDetails.model_fields.items()
+}
 
 user_input = "Build me a course on Operating Systems."
 
-response = analyzer_chain.invoke({
+response = course_context_workflow.invoke({
    "text": user_input,
    "aspect": "course"
    })
 
-for question in response.question_set: #type: ignore
-    print(str(question))
+for key , value in response.__dict__.items():
+    print(f"{key}: {value}")
