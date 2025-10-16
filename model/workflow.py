@@ -24,8 +24,12 @@ question_llm = llm.with_structured_output(
     Questions
 )
 
-# Utility Function
+# Utilities
 
+description = { 
+    name : field.description
+    for name, field in CourseDetails.model_fields.items()
+}
 def modify(
         course_details: CourseDetails, 
         unspecified_property: str, 
@@ -66,7 +70,7 @@ clarifier_chain = (
 
 # Workflows
 
-course_context_workflow = (
+course_details_workflow = (
     course_analyzer_chain 
     | RunnableParallel({
         "questions": clarifier_chain,
@@ -77,14 +81,10 @@ course_context_workflow = (
 
 
 
-description = { 
-    name : field.description
-    for name, field in CourseDetails.model_fields.items()
-}
 
 user_input = "Build me a course on Operating Systems."
 
-response = course_context_workflow.invoke({
+response = course_details_workflow.invoke({
    "text": user_input,
    "aspect": "course"
    })
