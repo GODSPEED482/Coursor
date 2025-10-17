@@ -17,7 +17,7 @@ llm = ChatGoogleGenerativeAI(
 
 # LLM
 
-course_llm = llm.with_structured_output(
+course_details_llm = llm.with_structured_output(
     CourseDetails
 )
 question_llm = llm.with_structured_output(
@@ -35,7 +35,7 @@ def modify(
         unspecified_property: str, 
         user_response: str
     ) -> CourseDetails:
-        context_modifier_chain = context_modifier_prompt | course_llm
+        context_modifier_chain = context_modifier_prompt | course_details_llm
         return context_modifier_chain.invoke({
             "description": str(description),
             "course_details": str(course_details),
@@ -57,7 +57,7 @@ def ask_questions(questions: list[Question], course_details: CourseDetails) -> C
 
 # Chains
 
-course_analyzer_chain = analyzer_prompt | course_llm
+course_analyzer_chain = analyzer_prompt | course_details_llm
 
 clarifier_chain = (
     RunnableLambda(get_unspecified_properties)

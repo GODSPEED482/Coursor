@@ -26,11 +26,6 @@ class Question(BaseModel):
 class Questions(BaseModel):
    """Provide a set of questions needed to be asked to the user in a structured manner, for a clear context"""
    question_set: list[Question] = Field(... , description="the set of questions required to make the context clear.")
-   
-
-# TODO: SYSTEM PROMPT
-
-# CONTEXT ANALYZER
 
 analyzer_prompt = ChatPromptTemplate.from_messages([
     ("system" , 
