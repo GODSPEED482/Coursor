@@ -1,10 +1,36 @@
 from langchain.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 
 # user_input -> context_analyzer -> scope of study , prerequisite knowlege -> purpose analyzer -> courseplanner
 
 
+# ======================================================================
+#                          HELPER CLASSES
+# ======================================================================
+class Skill(BaseModel):
+    """Represents the smallest unit — a specific concept or skill."""
+    name: str
+    details: Optional[str] = None  # Extra description or examples
+
+
+class Topic(BaseModel):
+    """Represents a grouped topic like 'Programming Language' or 'Algorithms'."""
+    title: str
+    skills: List[Skill]
+
+
+class Section(BaseModel):
+    """Represents a major section like 'Programming Fundamentals'."""
+    title: str
+    description: Optional[str] = None
+    topics: List[Topic]
+
+
+class Curriculum(BaseModel):
+    """Top-level model to represent the entire structured list."""
+    name: str
+    sections: List[Section]
 
 class CourseDetails(BaseModel):
     """Get insights regarding the course in a structured manner."""
@@ -13,7 +39,6 @@ class CourseDetails(BaseModel):
     target_audience: list[str] = Field(... , description="A list of strings; define the scope of study necessary for undestanding this course (Graduate, Post-Graduate, etc.)")
     difficultyLevel: str = Field(... , description="A string defining difficulty of the course on a scale of 1 to 10")
     deadline: Optional[str] = Field(... , description="A string defining the deadline date of the course: The time by which the course needs to be finished by the user.")
-    prerequisites: Optional[list[str]] = Field(... , description="The knowledge user already possesses in the course.")
     model_config = {
         "arbitrary_types_allowed": True
     }
@@ -26,6 +51,19 @@ class Question(BaseModel):
 class Questions(BaseModel):
    """Provide a set of questions needed to be asked to the user in a structured manner, for a clear context"""
    question_set: list[Question] = Field(... , description="the set of questions required to make the context clear.")
+
+
+
+
+
+
+
+
+
+# ======================================================================
+#                              PROMPTS
+# ======================================================================
+
 
 analyzer_prompt = ChatPromptTemplate.from_messages([
     ("system" , 
@@ -48,13 +86,6 @@ analyzer_prompt = ChatPromptTemplate.from_messages([
      ("human", 
       "{text}")
 ])
-
-def get_unspecified_properties(details_object: CourseDetails):
-   unspecified_properties = []
-   for property, value in details_object.__dict__.items():
-      if str(value).__contains__("NOT SPECIFIED"):
-         unspecified_properties.append(property)
-   return unspecified_properties
 
 clarifier_prompt = ChatPromptTemplate.from_messages([
    (
@@ -120,3 +151,85 @@ context_modifier_prompt = ChatPromptTemplate.from_messages([
       """
    )
 ])
+
+from langchain.prompts import ChatPromptTemplate
+
+prerequisite_analyzer_prompt = ChatPromptTemplate.from_messages([
+    (
+        "system",
+        """
+# INSTRUCTIONS:
+- You are serving as the sub-agent for a system that helps build courses as per query.
+- "Each sub-agent has a specific task. They must not go beyond the task they are assigned to."
+- Your task is as follows:
+
+TASK — Prerequisite Analyzer:
+1) Read COURSE_DETAILS.
+2) Infer the prerequisite knowledge/skills required to succeed in the course.
+3) Classify prerequisites into clear buckets (e.g., Programming Fundamentals, Data Structures & Algorithms, OS/Systems Basics, Math/Logic, Tooling/Workflow).
+4) For each prerequisite, provide:
+   - short_description (1–2 lines),
+   - importance (High/Medium/Low),
+   - suggested_resources (2–3 concise items; titles only),
+   - assessment_check (a simple, actionable self-check).
+5) Identify gaps for the target audience and propose a compact bridging plan that fits the timeline until the deadline.
+6) Keep output tightly structured in the JSON schema below and avoid extra commentary.
+7) For reference this is todays date: {today_date}
+"""
+    ),
+    (
+        "human",
+        """
+- COURSE_DETAILS:
+  title: {title}
+  objectives: {objectives}
+  target_audience: {target_audience}
+  difficultyLevel: {difficultyLevel}
+  deadline: {deadline}
+"""
+    )
+])
+
+
+
+
+
+
+
+
+# ======================================
+#               FUNCTIONS
+# ======================================
+
+def print_curriculum(curriculum):
+    """Nicely print the Curriculum data structure with indentation and bullets."""
+
+    def indent(text, level):
+        """Helper to indent text by level."""
+        return "    " * level + text
+
+    print(f"\n📘 Curriculum: {curriculum.name}\n" + "=" * (14 + len(curriculum.name)))
+
+    for section_index, section in enumerate(curriculum.sections, start=1):
+        print(f"\n{section_index}. {section.title}")
+        if section.description:
+            print(indent(f"→ {section.description}", 1))
+
+        for topic_index, topic in enumerate(section.topics, start=1):
+            print(indent(f"{section_index}.{topic_index}) {topic.title}", 1))
+
+            for skill in topic.skills:
+                bullet = "•"
+                skill_line = f"{bullet} {skill.name}"
+                print(indent(skill_line, 2))
+                if skill.details:
+                    print(indent(f"  ↳ {skill.details}", 3))
+
+    print("\n✅ End of Curriculum\n")
+
+def get_unspecified_properties(details_object: CourseDetails):
+   unspecified_properties = []
+   for property, value in details_object.__dict__.items():
+      if str(value).__contains__("NOT SPECIFIED"):
+         unspecified_properties.append(property)
+   return unspecified_properties
