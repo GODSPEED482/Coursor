@@ -2,48 +2,67 @@ from dotenv import load_dotenv
 load_dotenv()
 from langchain.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
-from datetime import date
+from datetime import timedelta
 from typing import Dict, Optional
 from langchain_google_genai import ChatGoogleGenerativeAI
+from utils import *
 
 
-class Duration(BaseModel):
-    years: Optional[int] =Field(..., description="no. of years it takes to complete the assigned module")
-    months: Optional[int] =Field(..., description="no. of months it takes to complete the assigned module")
-    weeks: Optional[int] =Field(..., description="no. of weeks it takes to complete the assigned module")
-    days: Optional[int] =Field(..., description="no. of days it takes to complete the assigned module")
-    
 class Schedule(BaseModel):
-    """"""
-    duration: Duration =Field(...,description="Describe the time needed to complete the course..")
-    start_date: date=Field(... , description="The date when the assigned module shall commence.")
-    end_date: date=Field(... , description="The date when the assigned module shall be completed.")
-
-class Topic(BaseModel):
+    """Divides the entire curriculum Duration into two parts:
+        - For learning the prerequisites.
+        - For learning the main subject of the course
     """
-    Represents a focused sub-section within a course module.
-    Topics are arranged sequentially to form a modular learning structure,
-    each contributing to a deeper and more comprehensive understanding
-    of the overall course subject.
+    prerequisite_duration: int = Field(..., description="Number of Days the user must focus on learning the prerequisite of the course.")
+
+    course_duration: int = Field(..., description="Number of days the user must focus on learning the main-curriculum. This constitutes a significant portion of the entire course Duration")
+
+time_divider_prompt = ChatPromptTemplate.from_messages([
+    ("system", 
     """
-    title: str = Field(..., description="The title or name of the topic.")
-    content: str = Field(..., description="Detailed explanation or notes in Markdown format.")
+    You are an assistant that divides the available learning time between prerequisites and the main curriculum.
 
+        ## TASK:
+        - Calculate how many days should be dedicated to learning the prerequisites vs. the main course.
+        - The total duration should not exceed the number of days between `today_date` and `deadline`.
+        - Allocate a significant amount of the course_duration to the curriculum
+        - !!YOU MUST GENERATE OUTPUT IN DAYS ONLY. 
+        - "0 days" can be allocated to the prerequisite, but do this only under extremely tight deadlines.
+        - Return your result in JSON format with fields:
+            - ** prerequisite_duration **: Number of Days the user must focus on learning the prerequisite of the course.
+            - ** curriculum_duration **: Number of days the user must focus on learning the main-curriculum. This constitutes a significant portion of the entire course Duration
 
-class Module(BaseModel):
-    """Describe a course module: A module can be defined as a self-contained unit or 
-    section within a larger course."""
-    title: str=Field(...,description="Name or title of the module.")
-    content: list[Topic]=Field(..., description="All the topics relevant to the Module, arranged in a proper sequential manner.")
-    
+        - While generating output no need to mention "days" in literals as the terms itself define number of days only. For Example:
+            - ❌ Wrong: "0 days", "1 day", "2 days"
+            - ✅ Right: "0", "1", "2"
+    """),
+    ("human",
+    """
+    Here are the following resources that you require:
+        - ** COURSE DEADLINE **: {deadline}
+        - ** CURRENT DATE **: {today_date}
+    """)
+])
 
-class CoursePlan(BaseModel):
-    """This is a model that stores information regarding all the modules of the course and the time required to finish them."""
-    title:  str=Field(...,description="Title of the course.")
-    schedule:  Dict[Module , Schedule]=Field(... , description="Maps a module against a schedule that needs to be followed in order to finish the course.")
+course_details= {
+    "title": "Operating Systems",
+    "objectives": ['Prepare for upcoming Semester Exams'],
+    "target_audience": ['3rd Year 1st Semester BTech IT student'],
+    "difficultyLevel": 7,
+    "deadline": "3rd December",
+    "today_date": "2025-11-3"
+}
 
 llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
     thinking_budget=1024
 )
-course_plan_llm=llm.with_structured_output(CoursePlan)
+
+schedule_llm = llm.with_structured_output(Schedule)
+time_divider_chain = time_divider_prompt|schedule_llm
+# response = time_divider_chain.invoke(course_details)
+
+# print_dict(response.__dict__)
+
+prerequisite_planner_prompt = "hey"
+course_subject_planner_prompt = "hello"
