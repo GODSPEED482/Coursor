@@ -4,7 +4,7 @@ load_dotenv()
 from langchain.schema.runnable import RunnableParallel, RunnableLambda, RunnablePassthrough, RunnableBranch
 from interrogator_utils import *
 from langchain_google_genai import ChatGoogleGenerativeAI
-from planner_utils import time_divider_chain, course_details
+from planner_utils import *
 from utils import *
 
 llm = ChatGoogleGenerativeAI(

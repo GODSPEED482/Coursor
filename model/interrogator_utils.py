@@ -8,30 +8,6 @@ from typing import Optional, List
 # ======================================================================
 #                          HELPER CLASSES
 # ======================================================================
-class Skill(BaseModel):
-    """Represents the smallest unit — a specific concept or skill."""
-    name: str = Field(..., description= "Name of the skill")
-    details: Optional[str] = Field(..., description="Extra description or examples") 
-
-class Topic(BaseModel):
-    """Represents a grouped topic like 'Programming Language' or 'Algorithms'."""
-    title: str = Field(..., description="Title of the topic")
-    skills: List[Skill] = Field(..., description="List of Skills the topic comprises of")
-
-
-class Section(BaseModel):
-    """Represents a major section like 'Programming Fundamentals'."""
-    title: str = Field(..., description="Title of the section")
-    description: Optional[str] = Field(..., description="defines what the section is all about")
-    day_no: int = Field(..., description="The daywise sequential ordering of the Section. his number need not be unique to every constituent section of a curriculum. Just represent by what day of curriculum initiation this section requires completion.")
-    topics: List[Topic] = Field(..., description="List of the topics relevant to the section")
-
-
-class Curriculum(BaseModel):
-    """Top-level model to represent the entire structured list."""
-    name: str = Field(..., description="Title of the Curriculum")
-    days: int = Field(..., description="Total days to complete the curriculum.")
-    sections: List[Section] = Field(..., description="List of Sections relevant to the curriculum")
 
 class CourseDetails(BaseModel):
     """Get insights regarding the course in a structured manner."""
@@ -153,44 +129,6 @@ context_modifier_prompt = ChatPromptTemplate.from_messages([
    )
 ])
 
-from langchain.prompts import ChatPromptTemplate
-
-prerequisite_planner_prompt = ChatPromptTemplate.from_messages([
-    (
-        "system",
-        """
-# INSTRUCTIONS:
-- You are serving as the sub-agent for a system that helps build courses as per query.
-- "Each sub-agent has a specific task. They must not go beyond the task they are assigned to."
-- Your task is as follows:
-
-TASK — Prerequisite Analyzer:
-1) Read COURSE_DETAILS. The COURSE DETAILS is provided to you in a following structure:
-   {course_description}
-2) Infer the prerequisite knowledge/skills required to succeed in the course.
-3) Classify prerequisites into clear buckets (e.g., Programming Fundamentals, Data Structures & Algorithms, OS/Systems Basics, Math/Logic, Tooling/Workflow).
-4) Here is the description of the output structure you are generating:
-   - CURRICULUM:- {curriculum_description}
-   - SECTION:- {section_description}
-   - TOPIC:- {topic_description}
-   - SKILL:- {skill_description}
-5) Identify gaps for the target audience and propose a compact bridging plan that fits the timeline until the deadline.
-6) The curriculum must be planned such that it is feasible for the user to complete it within the specified days.
-"""
-    ),
-    (
-        "human",
-        """
-- COURSE_DETAILS:
-  title: {title}
-  objectives: {objectives}
-  target_audience: {target_audience}
-  difficultyLevel: {difficultyLevel}
-  duration: {curriculum_duration}
-  
-"""
-    )
-])
 
 
 
@@ -202,33 +140,6 @@ TASK — Prerequisite Analyzer:
 # ======================================
 #               FUNCTIONS
 # ======================================
-
-def print_curriculum(curriculum):
-    """Nicely print the Curriculum data structure with indentation and bullets."""
-
-    def indent(text, level):
-        """Helper to indent text by level."""
-        return "    " * level + text
-
-    print(f"\n📘 Curriculum: {curriculum.name}\n" + "=" * (14 + len(curriculum.name)))
-    print(f"\n Total days: {curriculum.days}\n" + "=" * (14 + len(curriculum.name)))
-
-    for section_index, section in enumerate(curriculum.sections, start=1):
-        print(f"\nDay {section.day_no} - {section_index}. {section.title}")
-        if section.description:
-            print(indent(f"→ {section.description}", 1))
-
-        for topic_index, topic in enumerate(section.topics, start=1):
-            print(indent(f"{section_index}.{topic_index}) {topic.title}", 1))
-
-            for skill in topic.skills:
-                bullet = "•"
-                skill_line = f"{bullet} {skill.name}"
-                print(indent(skill_line, 2))
-                if skill.details:
-                    print(indent(f"  ↳ {skill.details}", 3))
-
-    print("\n✅ End of Curriculum\n")
 
 def get_unspecified_properties(details_object: CourseDetails):
    unspecified_properties = []

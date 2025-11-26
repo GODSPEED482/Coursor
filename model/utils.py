@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 from langchain.prompts import ChatPromptTemplate
-from interrogator_utils import Curriculum
 from langchain.schema.runnable import RunnableLambda
 from datetime import date
 
