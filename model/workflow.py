@@ -127,17 +127,18 @@ time_divider_workflow = (
      | (lambda x: flatten_dict(x))
      | (lambda x: del_prop(x , "today_date"))
      | (lambda x: del_prop(x , "deadline"))
+     | get_planner_context
 )
 
+course_subject_planner_workflow = course_subject_planner_prompt | llm.with_structured_output(Curriculum)
+
 prerequisite_planner_workflow = (
-     RunnableLambda(lambda x: add_prop(x , "course_description" , str(get_description(CourseDetails)) ))
-    | (lambda x: add_prop(x , "curriculum_description" , str(get_description(Curriculum)) ))
-    | (lambda x: add_prop(x , "section_description" , str(get_description(Section)) ))
-    | (lambda x: add_prop(x , "topic_description" , str(get_description(Topic)) ))
-    | (lambda x: add_prop(x , "skill_description" , str(get_description(Skill)) ))
-    | (lambda x: add_prop(x , "curriculum_duration" , x["prerequisite_duration"] ))
-    | prerequisite_planner_chain
-)
+RunnableBranch((
+    is_prerequisite_required, 
+    prerequisite_planner_chain), 
+    RunnableLambda(lambda x: None)
+))
+
 
 
 
@@ -151,13 +152,25 @@ prerequisite_planner_workflow = (
 
 user_input = "Build me a course on Operating Systems."
 
-response = (time_divider_workflow | RunnableBranch((is_prerequisite_required, prerequisite_planner_workflow), RunnableLambda(lambda x: {"answer": "No prerequisite provided"}))).invoke(course_details)
+response = (
+time_divider_workflow 
+| RunnableParallel({
+     "course_plan": course_subject_planner_workflow,
+     "prerequisite_plan": prerequisite_planner_workflow
+})
+).invoke(course_details)
+
 
 # response = time_divider_workflow.invoke(course_details)
 
 # print_dict(response)
 
 # response = llm.invoke("Suppose there is a 3rd year B.Tech IT student trying to learn Operating Systems for his upcoming semester exams. When asked about how difficult he wants the course to be on a scale of 1 to 10 he has opted for 7. He wants to complete the course by 3rd December 2025 and today is 28th November 2025. How much time of his course_duration should he give to learning prerequisites before jumping to the main section??")
+def show(response):
+    print_curriculum(response) if type(response) == Curriculum  else print_dict(response)
 
-print_curriculum(response) if type(response) == Curriculum  else print_dict(response)
+print("Prerequisite Plan\n")
+show(response["prerequisite_plan"])
+print("Course Plan\n")
+show(response["course_plan"])
 # print(response.content)

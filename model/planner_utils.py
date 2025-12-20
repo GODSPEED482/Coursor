@@ -26,7 +26,6 @@ class Schedule(BaseModel):
         - For learning the main subject of the course
     """
     prerequisite_duration: int = Field(..., description="Number of Days the user must focus on learning the prerequisite of the course.")
-
     course_duration: int = Field(..., description="Number of days the user must focus on learning the main-curriculum. This constitutes a significant portion of the entire course Duration")
 
 class Skill(BaseModel):
@@ -136,7 +135,7 @@ TASK — Prerequisite Analyzer:
   objectives: {objectives}
   target_audience: {target_audience}
   difficultyLevel: {difficultyLevel}
-  duration: {curriculum_duration}
+  duration: {prerequisite_duration}
   
 """
     )
@@ -144,7 +143,58 @@ TASK — Prerequisite Analyzer:
 
 
 
-course_subject_planner_prompt = "hello"
+course_subject_planner_prompt = ChatPromptTemplate.from_messages([
+    (
+        "system",
+    """
+# ROLE:
+You are a curriculum-structuring sub-agent inside a course-building system.
+
+# STRICT INSTRUCTIONS (NON-NEGOTIABLE):
+- You must ONLY perform the task assigned to you.
+- DO NOT explain your reasoning.
+- DO NOT provide advice, commentary, or summaries.
+- DO NOT add or remove fields from the output schema.
+- DO NOT hallucinate information outside COURSE_DETAILS.
+
+# INPUT YOU WILL RECEIVE:
+You will receive COURSE_DETAILS in the following structure:
+{course_description}
+
+# YOUR TASK:
+Using COURSE_DETAILS, generate a structured learning plan with the following hierarchy:
+
+# OUTPUT STRUCTURE (MANDATORY):
+    - CURRICULUM: {curriculum_description}
+    - SECTION: {section_description}
+    - TOPIC: {topic_description}
+    - SKILL: {skill_description}
+
+# CONSTRAINTS:
+- Difficulty must match COURSE_DETAILS.difficultyLevel
+- Depth must match COURSE_DETAILS.target_audience
+- Total curriculum duration must equal COURSE_DETAILS.duration
+- Sections should be ordered progressively from fundamentals to advanced concepts
+- Every Topic MUST have at least one Skill
+- Every Section MUST have at least one Topic
+
+    """
+    ),
+    (
+        "human" ,
+    """
+- COURSE_DETAILS:
+  title: {title}
+  objectives: {objectives}
+  target_audience: {target_audience}
+  difficultyLevel: {difficultyLevel}
+  duration: {course_duration}
+    """
+    )
+])
+
+
+
 
 
 
@@ -204,6 +254,46 @@ def print_curriculum(curriculum):
 
 
 # =====================================================
+#                      RUNNABLES
+# =====================================================
+
+get_planner_context = (
+    RunnableLambda(lambda x: add_prop(x , "course_description" , str(get_description(CourseDetails)) ))
+    | (lambda x: add_prop(x , "curriculum_description" , str(get_description(Curriculum)) ))
+    | (lambda x: add_prop(x , "section_description" , str(get_description(Section)) ))
+    | (lambda x: add_prop(x , "topic_description" , str(get_description(Topic)) ))
+    | (lambda x: add_prop(x , "skill_description" , str(get_description(Skill)) ))
+    | (lambda x: add_prop(x , "curriculum_duration" , x["prerequisite_duration"] ))
+)
+
+llm = ChatGoogleGenerativeAI(
+    model="gemini-2.5-flash",
+    thinking_budget=1024
+)
+schedule_llm = llm.with_structured_output(Schedule)
+time_divider_chain = time_divider_prompt|schedule_llm
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# =====================================================
 #                 TEST AND DEBUG
 # =====================================================
     
@@ -215,14 +305,6 @@ course_details= {
     "deadline": "3rd December",
     "today_date": "2025-11-3"
 }
-
-llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
-    thinking_budget=1024
-)
-
-schedule_llm = llm.with_structured_output(Schedule)
-time_divider_chain = time_divider_prompt|schedule_llm
 # response = time_divider_chain.invoke(course_details)
 
-# print_dict(response.__dict__)
+print(get_description(Skill))

@@ -2,6 +2,8 @@ from pydantic import BaseModel
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema.runnable import RunnableLambda
 from datetime import date
+from interrogator_utils import CourseDetails
+
 
 
 class Validate(BaseModel):
@@ -42,9 +44,10 @@ def flatten_dict(x: dict) -> dict:
             nest_dict_keys.append(key)
     for key in nest_dict_keys:
         x[key] = flatten_dict(x[key])
-        for subkey, subval in x[key].items():
-            x[subkey] = subval
+        temp = x[key]
         x.pop(key)
+        for subkey, subval in temp.items():
+            x[subkey] = subval
     return x
 
 # print_dict(flatten_dict({

@@ -5,6 +5,12 @@ from typing import Optional, List
 # user_input -> context_analyzer -> scope of study , prerequisite knowlege -> purpose analyzer -> courseplanner
 
 
+
+
+
+
+
+
 # ======================================================================
 #                          HELPER CLASSES
 # ======================================================================
@@ -28,6 +34,21 @@ class Question(BaseModel):
 class Questions(BaseModel):
    """Provide a set of questions needed to be asked to the user in a structured manner, for a clear context"""
    question_set: list[Question] = Field(... , description="the set of questions required to make the context clear.")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -128,6 +149,17 @@ context_modifier_prompt = ChatPromptTemplate.from_messages([
       """
    )
 ])
+
+
+
+
+
+
+
+
+
+
+
 
 
 
