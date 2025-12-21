@@ -3,11 +3,17 @@ from langchain.prompts import ChatPromptTemplate
 from langchain.schema.runnable import RunnableLambda
 from datetime import date
 from interrogator_utils import CourseDetails
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 
 
 class Validate(BaseModel):
      is_valid: bool     
+
+llm = ChatGoogleGenerativeAI(
+    model="gemini-2.5-flash-lite",
+    thinking_budget=1024
+)
 
 
 

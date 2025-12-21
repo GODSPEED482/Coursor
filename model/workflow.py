@@ -7,10 +7,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from planner_utils import *
 from utils import *
 
-llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
-    thinking_budget=1024
-)
+
 
 # LLM
 
@@ -171,6 +168,10 @@ def show(response):
 
 print("Prerequisite Plan\n")
 show(response["prerequisite_plan"])
+
 print("Course Plan\n")
 show(response["course_plan"])
+
+print("\n\n\n\n\n\n\n\n\n\nCombined Plan\n")
+show(add_curriculum(response["prerequisite_plan"] , response["course_plan"]))
 # print(response.content)

@@ -4,7 +4,6 @@ from langchain.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 from datetime import timedelta
 from typing import Dict, Optional, List
-from langchain_google_genai import ChatGoogleGenerativeAI
 from utils import *
 
 
@@ -239,6 +238,17 @@ def print_curriculum(curriculum):
 
     print("\n✅ End of Curriculum\n")
 
+def add_curriculum(self: Curriculum, other: Curriculum) -> Curriculum:
+    temp = [add_days(section, self.days) for section in other.sections]
+    return Curriculum(name=self.name,
+                      days=self.days + other.days,
+                      sections=self.sections + temp)
+
+def add_days(self: Section, day: int) -> Section:
+    return Section(title=self.title,
+                   description=self.description,
+                   day_no=self.day_no + day,
+                   topics=self.topics)
 
 
 
@@ -266,10 +276,7 @@ get_planner_context = (
     | (lambda x: add_prop(x , "curriculum_duration" , x["prerequisite_duration"] ))
 )
 
-llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
-    thinking_budget=1024
-)
+
 schedule_llm = llm.with_structured_output(Schedule)
 time_divider_chain = time_divider_prompt|schedule_llm
 
@@ -307,4 +314,5 @@ course_details= {
 }
 # response = time_divider_chain.invoke(course_details)
 
-print(get_description(Skill))
+# print(get_description(Skill))
+
