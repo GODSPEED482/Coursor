@@ -4,6 +4,7 @@ from langchain.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 from datetime import timedelta
 from typing import Dict, Optional, List
+from creator_utils import Paragraph, Quiz
 from utils import *
 
 
@@ -19,6 +20,35 @@ from utils import *
 # =====================================================
 #                    HELPER CLASSES
 # =====================================================
+
+
+class Skill(BaseModel):
+    """Represents the smallest unit — a specific concept or skill."""
+    name: str = Field(..., description= "Name of the skill")
+    details: Optional[str] = Field(..., description="Extra description or examples") 
+    introduction: str | None = Field(
+    ...,
+    description=(
+        "Opening narrative that introduces the context, motivation, "
+        "and learning objectives of the content. It sets expectations."
+        "and provides a high-level overview before the detailed body begins."
+        "!!ONLY FILL THIS SECTION IF YOU ARE A CREATOR AGENT. IF YOU ARE A PLANNER AGENT ASSIGN NONE TO IT."
+    )
+    )
+    body: List[Paragraph] | None = Field(
+        default_factory=list,
+        description=("Main content of the body"
+        "!!ONLY FILL THIS SECTION IF YOU ARE A CREATOR AGENT. IF YOU ARE A PLANNER AGENT ASSIGN NONE TO IT.")
+    )
+    conclusion: str = Field(
+    ...,
+    description=(
+        "Closing narrative that summarizes key takeaways, reinforces "
+        "core concepts, and provides closure to the discussion. "
+        "May include final insights, recommendations, or next steps."
+        "!!ONLY FILL THIS SECTION IF YOU ARE A CREATOR AGENT. IF YOU ARE A PLANNER AGENT ASSIGN NONE TO IT."
+    ))
+
 class Schedule(BaseModel):
     """Divides the entire curriculum Duration into two parts:
         - For learning the prerequisites.
@@ -27,15 +57,16 @@ class Schedule(BaseModel):
     prerequisite_duration: int = Field(..., description="Number of Days the user must focus on learning the prerequisite of the course.")
     course_duration: int = Field(..., description="Number of days the user must focus on learning the main-curriculum. This constitutes a significant portion of the entire course Duration")
 
-class Skill(BaseModel):
-    """Represents the smallest unit — a specific concept or skill."""
-    name: str = Field(..., description= "Name of the skill")
-    details: Optional[str] = Field(..., description="Extra description or examples") 
 
 class Topic(BaseModel):
     """Represents a grouped topic like 'Programming Language' or 'Algorithms'."""
     title: str = Field(..., description="Title of the topic")
     skills: List[Skill] = Field(..., description="List of Skills the topic comprises of")
+    quiz: Quiz | None = Field(... , 
+                       description=(
+                           "a final quiz that pops up after completion of each topic. questions from the quiz must be within/ related to the scope of given skills."
+                           "!!ONLY FILL THIS SECTION IF YOU ARE A CREATOR AGENT. IF YOU ARE A PLANNER AGENT ASSIGN NONE TO IT.")
+                       )
 
 
 class Section(BaseModel):
@@ -51,6 +82,7 @@ class Curriculum(BaseModel):
     name: str = Field(..., description="Title of the Curriculum")
     days: int = Field(..., description="Total days to complete the curriculum.")
     sections: List[Section] = Field(..., description="List of Sections relevant to the curriculum")
+
 
 
 
@@ -276,7 +308,7 @@ get_planner_context = (
     | (lambda x: add_prop(x , "curriculum_duration" , x["prerequisite_duration"] ))
 )
 
-
+llm = get_llm()
 schedule_llm = llm.with_structured_output(Schedule)
 time_divider_chain = time_divider_prompt|schedule_llm
 
@@ -315,4 +347,3 @@ course_details= {
 # response = time_divider_chain.invoke(course_details)
 
 # print(get_description(Skill))
-

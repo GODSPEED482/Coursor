@@ -10,6 +10,7 @@ from utils import *
 
 
 # LLM
+llm = get_llm()
 
 course_details_llm = llm.with_structured_output(
     CourseDetails
@@ -54,7 +55,7 @@ def modify(
             "user_response": user_response
         }) #type: ignore
 
-def ask_questions(questions: list[Question], course_details: CourseDetails) -> CourseDetails:
+def ask_questions(questions: list[Interrogation], course_details: CourseDetails) -> CourseDetails:
 
     for question in questions:
         flag = 0
@@ -165,6 +166,8 @@ time_divider_workflow
 # response = llm.invoke("Suppose there is a 3rd year B.Tech IT student trying to learn Operating Systems for his upcoming semester exams. When asked about how difficult he wants the course to be on a scale of 1 to 10 he has opted for 7. He wants to complete the course by 3rd December 2025 and today is 28th November 2025. How much time of his course_duration should he give to learning prerequisites before jumping to the main section??")
 def show(response):
     print_curriculum(response) if type(response) == Curriculum  else print_dict(response)
+
+print(response["prerequisite_plan"], "\n\n\n\n\n")
 
 print("Prerequisite Plan\n")
 show(response["prerequisite_plan"])

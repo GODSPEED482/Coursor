@@ -10,10 +10,13 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 class Validate(BaseModel):
      is_valid: bool     
 
-llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash-lite",
-    thinking_budget=1024
-)
+
+def get_llm():
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash-lite",
+        thinking_budget=1024
+    )
+    return llm
 
 
 

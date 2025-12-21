@@ -26,14 +26,14 @@ class CourseDetails(BaseModel):
         "arbitrary_types_allowed": True
     }
 
-class Question(BaseModel):
+class Interrogation(BaseModel):
    """Question to be asked for clarification of context"""
    unspecified_property: str = Field(... , description="the property unpecified and requires some resolution")
    clarification_question: str = Field(... , description="the question that was asked in order to clarify the result of the unspecified_property.")
 
 class Questions(BaseModel):
    """Provide a set of questions needed to be asked to the user in a structured manner, for a clear context"""
-   question_set: list[Question] = Field(... , description="the set of questions required to make the context clear.")
+   question_set: list[Interrogation] = Field(... , description="the set of questions required to make the context clear.")
 
 
 
