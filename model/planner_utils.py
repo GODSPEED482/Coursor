@@ -4,8 +4,9 @@ from langchain.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 from datetime import timedelta
 from typing import Dict, Optional, List
-from creator_utils import Paragraph, Quiz
+from creator_utils import Para, Quiz
 from utils import *
+from typing_extensions import Annotated
 
 
 
@@ -32,21 +33,21 @@ class Skill(BaseModel):
         "Opening narrative that introduces the context, motivation, "
         "and learning objectives of the content. It sets expectations."
         "and provides a high-level overview before the detailed body begins."
-        "!!ONLY FILL THIS SECTION IF YOU ARE A CREATOR AGENT. IF YOU ARE A PLANNER AGENT ASSIGN NONE TO IT."
+        "!!ONLY FILL THIS SECTION IF YOU ARE A CREATOR AGENT. IF YOU ARE A PLANNER AGENT YOU MUST ASSIGN NONE TO IT."
     )
     )
-    body: List[Paragraph] | None = Field(
+    body: List[Para] | None = Field(
         default_factory=list,
         description=("Main content of the body"
         "!!ONLY FILL THIS SECTION IF YOU ARE A CREATOR AGENT. IF YOU ARE A PLANNER AGENT ASSIGN NONE TO IT.")
     )
-    conclusion: str = Field(
+    conclusion: str | None = Field(
     ...,
     description=(
         "Closing narrative that summarizes key takeaways, reinforces "
         "core concepts, and provides closure to the discussion. "
         "May include final insights, recommendations, or next steps."
-        "!!ONLY FILL THIS SECTION IF YOU ARE A CREATOR AGENT. IF YOU ARE A PLANNER AGENT ASSIGN NONE TO IT."
+        "!!ONLY FILL THIS SECTION IF YOU ARE A CREATOR AGENT. IF YOU ARE A PLANNER AGENT YOU MUST ASSIGN NONE TO IT."
     ))
 
 class Schedule(BaseModel):
@@ -144,7 +145,8 @@ prerequisite_planner_prompt = ChatPromptTemplate.from_messages([
 - "Each sub-agent has a specific task. They must not go beyond the task they are assigned to."
 - Your task is as follows:
 
-TASK — Prerequisite Analyzer:
+TASK — Prerequisite Planner:
+- !YOU ARE A PLANNER AGENT.
 1) Read COURSE_DETAILS. The COURSE DETAILS is provided to you in a following structure:
    {course_description}
 2) Infer the prerequisite knowledge/skills required to succeed in the course.
@@ -156,6 +158,7 @@ TASK — Prerequisite Analyzer:
    - SKILL:- {skill_description}
 5) Identify gaps for the target audience and propose a compact bridging plan that fits the timeline until the deadline.
 6) The curriculum must be planned such that it is feasible for the user to complete it within the specified days.
+7) !!!There are certain attributes in the TOPIC and SKILL that are only to be filled by CREATOR agent. You are a PLANNER agent. So you should assign them "None" type always.
 """
     ),
     (
@@ -182,11 +185,13 @@ course_subject_planner_prompt = ChatPromptTemplate.from_messages([
 You are a curriculum-structuring sub-agent inside a course-building system.
 
 # STRICT INSTRUCTIONS (NON-NEGOTIABLE):
+- !YOU ARE A PLANNER AGENT.
 - You must ONLY perform the task assigned to you.
 - DO NOT explain your reasoning.
 - DO NOT provide advice, commentary, or summaries.
 - DO NOT add or remove fields from the output schema.
 - DO NOT hallucinate information outside COURSE_DETAILS.
+- !!!There are certain attributes in the TOPIC and SKILL that are only to be filled by CREATOR agent. You are a PLANNER agent. So you should assign them "None" type always.
 
 # INPUT YOU WILL RECEIVE:
 You will receive COURSE_DETAILS in the following structure:

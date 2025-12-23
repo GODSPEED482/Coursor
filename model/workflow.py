@@ -5,6 +5,7 @@ from langchain.schema.runnable import RunnableParallel, RunnableLambda, Runnable
 from interrogator_utils import *
 from langchain_google_genai import ChatGoogleGenerativeAI
 from planner_utils import *
+from creator_utils import *
 from utils import *
 
 
@@ -17,6 +18,9 @@ course_details_llm = llm.with_structured_output(
 )
 question_llm = llm.with_structured_output(
     Questions
+)
+content_llm = llm.with_structured_output(
+     Skill
 )
 
 
@@ -97,6 +101,8 @@ clarifier_chain = (
 
 prerequisite_planner_chain = prerequisite_planner_prompt| llm.with_structured_output(Curriculum)
 
+content_injector_chain = get_creator_context | (lambda x: add_prop(x , "skill_description" , str(get_description(Skill)) ))| content_injector_prompt | content_llm
+
 
 
 
@@ -150,13 +156,13 @@ RunnableBranch((
 
 user_input = "Build me a course on Operating Systems."
 
-response = (
-time_divider_workflow 
-| RunnableParallel({
-     "course_plan": course_subject_planner_workflow,
-     "prerequisite_plan": prerequisite_planner_workflow
-})
-).invoke(course_details)
+# response = (
+# time_divider_workflow 
+# | RunnableParallel({
+#      "course_plan": course_subject_planner_workflow,
+#      "prerequisite_plan": prerequisite_planner_workflow
+# })
+# ).invoke(course_details)
 
 
 # response = time_divider_workflow.invoke(course_details)
@@ -164,17 +170,24 @@ time_divider_workflow
 # print_dict(response)
 
 # response = llm.invoke("Suppose there is a 3rd year B.Tech IT student trying to learn Operating Systems for his upcoming semester exams. When asked about how difficult he wants the course to be on a scale of 1 to 10 he has opted for 7. He wants to complete the course by 3rd December 2025 and today is 28th November 2025. How much time of his course_duration should he give to learning prerequisites before jumping to the main section??")
-def show(response):
-    print_curriculum(response) if type(response) == Curriculum  else print_dict(response)
+# def show(response):
+#     print_curriculum(response) if type(response) == Curriculum  else print_dict(response)
 
-print(response["prerequisite_plan"], "\n\n\n\n\n")
+# print(response["prerequisite_plan"], "\n\n\n\n\n")
 
-print("Prerequisite Plan\n")
-show(response["prerequisite_plan"])
+# print("Prerequisite Plan\n")
+# show(response["prerequisite_plan"])
 
-print("Course Plan\n")
-show(response["course_plan"])
+# print("Course Plan\n")
+# show(response["course_plan"])
 
-print("\n\n\n\n\n\n\n\n\n\nCombined Plan\n")
-show(add_curriculum(response["prerequisite_plan"] , response["course_plan"]))
+# print("\n\n\n\n\n\n\n\n\n\nCombined Plan\n")
+# show(add_curriculum(response["prerequisite_plan"] , response["course_plan"]))
 # print(response.content)
+
+
+new_skill = Skill(name='Variables and Data Types', details='Understanding basic data types (int, char, float, pointers) and variable declaration.', introduction=None, body=None, conclusion=None)
+
+response = content_injector_chain.invoke({"input_skill": new_skill})
+print(response)
+

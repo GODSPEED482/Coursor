@@ -13,6 +13,12 @@ class Validate(BaseModel):
 
 def get_llm():
     llm = ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash",
+        thinking_budget=1024
+    )
+    return llm
+def get_llm_lite():
+    llm = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash-lite",
         thinking_budget=1024
     )
