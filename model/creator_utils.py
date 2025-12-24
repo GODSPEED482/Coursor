@@ -1,20 +1,25 @@
 from langchain.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
-from datetime import timedelta
-from typing import Dict, Optional, List, Any, Literal, Union
+from typing import Optional, List, Literal
 from langchain.schema.runnable import RunnableLambda
 from utils import get_description, add_prop
-from typing_extensions import Annotated
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 # =====================================================
 #                    HELPER CLASSES
 # =====================================================
-
-from pydantic import BaseModel, Field
-from typing import List, Literal
-
 class VideoResource(BaseModel):
     """Represents a YouTube video linked to a skill."""
     type: Literal["video"] = "video"  # Discriminator field
@@ -107,6 +112,30 @@ class Quiz(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # =====================================================
 #                    PROMPTS
 # =====================================================
@@ -126,43 +155,13 @@ OUTPUT: A complete Skill object as valid JSON with:
 - conclusion: string
 
 RULES:
-- Output ONLY valid JSON
+- Output valid pydantic class: Skill
 - Use double quotes
 - No markdown formatting
 - No explanatory text
 
 #INPUT FORMAT (CRITICAL):
 - Skill: {skill_description}
-
-
-# OUTPUT FORMAT (CRITICAL):
-You MUST respond with a valid JSON object that matches the Skill schema exactly.
-- DO NOT wrap the output in markdown code blocks
-- DO NOT include any explanatory text before or after the JSON
-- DO NOT use Python syntax like Bullet(...) or Field(...)
-- USE proper JSON syntax with double quotes
-- The response must be parseable by json.loads()
-
-Example of CORRECT output format:
-{{
-  "name": "Variable Declaration",
-  "details": "Understanding how to declare variables",
-  "introduction": "Variables are fundamental...",
-  "body": [
-    {{
-      "type": "bullet",
-      "title": "Key Concepts",
-      "pointers": [
-        {{
-          "head": "Memory Allocation",
-          "body": "When you declare a variable..."
-        }}
-      ]
-    }}
-  ],
-  "conclusion": "In summary..."
-}}
-
 
 
 # CREATOR-ONLY ATTRIBUTES:
@@ -244,10 +243,6 @@ Internally reason about:
 - Learner cognitive load
 - Concept dependency
 
-
-
-
-
   
 All creator-owned attributes MUST be populated.
 All non-creator attributes MUST remain unchanged.
@@ -260,7 +255,7 @@ Produce ONLY the completed SKILL object.
         "human",
         """
         Here is the empty skill object:
-        - {input_skill}
+        - {input}
         Inject some content into it.
         """
     )

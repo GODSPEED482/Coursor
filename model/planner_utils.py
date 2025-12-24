@@ -1,14 +1,10 @@
-from dotenv import load_dotenv
-load_dotenv()
 from langchain.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
-from datetime import timedelta
-from typing import Dict, Optional, List
+from langchain.schema.runnable import RunnableLambda
+from interrogator_utils import CourseDetails
+from typing import Optional, List
 from creator_utils import Para, Quiz
 from utils import *
-from typing_extensions import Annotated
-
-
 
 
 
@@ -213,6 +209,7 @@ Using COURSE_DETAILS, generate a structured learning plan with the following hie
 - Sections should be ordered progressively from fundamentals to advanced concepts
 - Every Topic MUST have at least one Skill
 - Every Section MUST have at least one Topic
+- Every Section MUST represent a single day only. However there is NO NEED of mentioning the DAY_NO in the Section.title. Only mention it in the day no.
 
     """
     ),
@@ -313,9 +310,6 @@ get_planner_context = (
     | (lambda x: add_prop(x , "curriculum_duration" , x["prerequisite_duration"] ))
 )
 
-llm = get_llm()
-schedule_llm = llm.with_structured_output(Schedule)
-time_divider_chain = time_divider_prompt|schedule_llm
 
 
 
@@ -347,7 +341,7 @@ course_details= {
     "target_audience": ['3rd Year 1st Semester BTech IT student'],
     "difficultyLevel": 7,
     "deadline": "3rd December",
-    "today_date": "2025-11-3"
+    "today_date": "2025-11-6"
 }
 # response = time_divider_chain.invoke(course_details)
 

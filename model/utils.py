@@ -1,8 +1,7 @@
+from dotenv import load_dotenv
+load_dotenv()
 from pydantic import BaseModel
-from langchain.prompts import ChatPromptTemplate
-from langchain.schema.runnable import RunnableLambda
 from datetime import date
-from interrogator_utils import CourseDetails
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 

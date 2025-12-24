@@ -1,9 +1,5 @@
-import json
-from dotenv import load_dotenv
-load_dotenv()
 from langchain.schema.runnable import RunnableParallel, RunnableLambda, RunnablePassthrough, RunnableBranch
 from interrogator_utils import *
-from langchain_google_genai import ChatGoogleGenerativeAI
 from planner_utils import *
 from creator_utils import *
 from utils import *
@@ -23,6 +19,7 @@ content_llm = llm.with_structured_output(
      Skill
 )
 
+schedule_llm = llm.with_structured_output(Schedule)
 
 
 
@@ -90,6 +87,7 @@ def ask_questions(questions: list[Interrogation], course_details: CourseDetails)
 # ==============================================
 
 course_analyzer_chain = analyzer_prompt | course_details_llm
+time_divider_chain = time_divider_prompt|schedule_llm
 
 clarifier_chain = (
     RunnableLambda(get_unspecified_properties)
@@ -100,8 +98,7 @@ clarifier_chain = (
 )
 
 prerequisite_planner_chain = prerequisite_planner_prompt| llm.with_structured_output(Curriculum)
-
-content_injector_chain = get_creator_context | (lambda x: add_prop(x , "skill_description" , str(get_description(Skill)) ))| content_injector_prompt | content_llm
+content_injector_chain = content_injector_prompt | content_llm
 
 
 
@@ -143,8 +140,23 @@ RunnableBranch((
     RunnableLambda(lambda x: None)
 ))
 
+content_injector_workflow = (
+    get_creator_context 
+    | (lambda x: add_prop(x , 
+                          "skill_description" , 
+                          str(get_description(Skill))
+                          ))
+    | content_injector_chain
+)
 
 
+planner_agent = (
+time_divider_workflow 
+| RunnableParallel({
+     "course_plan": course_subject_planner_workflow,
+     "prerequisite_plan": prerequisite_planner_workflow
+})
+)
 
 
 
@@ -156,13 +168,6 @@ RunnableBranch((
 
 user_input = "Build me a course on Operating Systems."
 
-# response = (
-# time_divider_workflow 
-# | RunnableParallel({
-#      "course_plan": course_subject_planner_workflow,
-#      "prerequisite_plan": prerequisite_planner_workflow
-# })
-# ).invoke(course_details)
 
 
 # response = time_divider_workflow.invoke(course_details)
@@ -188,6 +193,5 @@ user_input = "Build me a course on Operating Systems."
 
 new_skill = Skill(name='Variables and Data Types', details='Understanding basic data types (int, char, float, pointers) and variable declaration.', introduction=None, body=None, conclusion=None)
 
-response = content_injector_chain.invoke({"input_skill": new_skill})
+response = content_injector_workflow.invoke({"input": new_skill })
 print(response)
-
