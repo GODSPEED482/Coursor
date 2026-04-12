@@ -191,7 +191,7 @@ user_input = "Build me a course on Operating Systems."
 # print(response.content)
 
 
-new_skill = Skill(name='Variables and Data Types', details='Understanding basic data types (int, char, float, pointers) and variable declaration.', introduction=None, body=None, conclusion=None)
+# new_skill = Skill(name='Variables and Data Types', details='Understanding basic data types (int, char, float, pointers) and variable declaration.', introduction=None, body=None, conclusion=None)
 
-response = content_injector_workflow.invoke({"input": new_skill })
-print(response)
+# response = content_injector_workflow.invoke({"input": new_skill })
+# print(response)
