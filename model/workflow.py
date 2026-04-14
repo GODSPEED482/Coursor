@@ -89,12 +89,27 @@ def ask_questions(questions: list[Interrogation], course_details: CourseDetails)
 course_analyzer_chain = analyzer_prompt | course_details_llm
 time_divider_chain = time_divider_prompt|schedule_llm
 
+def log_X(x):
+    print(type(x), x)
+    return x
+
+def is_empty(x: list) -> bool:
+    return len(x) == 0
+
 clarifier_chain = (
     RunnableLambda(get_unspecified_properties)
-    | (lambda x : {"props" : str(x), "context": str(description)})
-    | clarifier_prompt 
-    | question_llm
-    | (lambda x: x.question_set)
+    | RunnableBranch(
+         (
+            is_empty,
+            RunnableLambda(lambda x: [])
+         ),
+        RunnableLambda((lambda x : {"props" : str(x), "context": str(description)}))
+        # | log_X
+        | clarifier_prompt 
+        | question_llm
+        | (lambda x: x.question_set)
+        # | log_X)
+    )
 )
 
 prerequisite_planner_chain = prerequisite_planner_prompt| llm.with_structured_output(Curriculum)
@@ -103,7 +118,14 @@ content_injector_chain = content_injector_prompt | content_llm
 
 
 
-
+def log_course_details(course_details: CourseDetails):
+    print("Draft Course Details:")
+    print(f"Title: {course_details.title}")
+    print(f"Objectives: {course_details.objectives}")
+    print(f"Target Audience: {course_details.target_audience}")
+    print(f"Difficulty Level: {course_details.difficultyLevel}")
+    print(f"Deadline: {course_details.deadline}")
+    return course_details
 
 # ==============================================
 #                  Workflows
@@ -115,6 +137,7 @@ course_details_workflow = (
         "questions": clarifier_chain,
         "course_details": RunnablePassthrough()
     })
+    # |(lambda x: {"questions": x["questions"], "course_details": log_course_details(x["course_details"])}) #type: ignore
     |(lambda x: ask_questions(x["questions"], x["course_details"]))#type: ignore
     |(lambda x: x.__dict__)
     |(lambda x: add_today(x))
@@ -136,7 +159,7 @@ course_subject_planner_workflow = course_subject_planner_prompt | llm.with_struc
 prerequisite_planner_workflow = (
 RunnableBranch((
     is_prerequisite_required, 
-    prerequisite_planner_chain), 
+    prerequisite_planner_chain ), 
     RunnableLambda(lambda x: None)
 ))
 
@@ -150,7 +173,7 @@ content_injector_workflow = (
 )
 
 
-planner_agent = (
+planner_workflow = (
 time_divider_workflow 
 | RunnableParallel({
      "course_plan": course_subject_planner_workflow,
@@ -191,7 +214,17 @@ user_input = "Build me a course on Operating Systems."
 # print(response.content)
 
 
-# new_skill = Skill(name='Variables and Data Types', details='Understanding basic data types (int, char, float, pointers) and variable declaration.', introduction=None, body=None, conclusion=None)
+new_skill = Skill(name='Variables and Data Types', details='Understanding basic data types (int, char, float, pointers) and variable declaration.', introduction=None, body=None, conclusion=None)
 
-# response = content_injector_workflow.invoke({"input": new_skill })
-# print(response)
+response = content_injector_workflow.invoke({"input": new_skill })
+print(response)
+
+# response = course_details_workflow.invoke({
+#      "text": "Build me a course on Operating Systems. I want the course to be moderately difficult, around 7 out of 10. I need to prepare for an upcoming semester exam and I am currently at my 3rd year, B.E., Information Technology at Jadavpur University. I aim to complete the course by 3rd May 2026.",
+
+#      "course_details_description": str(get_description(CourseDetails))
+
+# })
+
+# print("\n\n\nFinal Course Details\n\n\n")
+# print(type(response), response)

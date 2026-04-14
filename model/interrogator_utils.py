@@ -72,14 +72,18 @@ analyzer_prompt = ChatPromptTemplate.from_messages([
      - Your task is to STRICTLY analyze the message sent by human and get insights regarding the course and user. Nothing else. Not even roadmap generation.
 
      Rules:
-        - Always return **valid JSON**.
+        - You must output in the format of a python object called COURSE_DETAILS (defined in the docs below). This object has some properties. You need to fill in the values of those properties based on the analysis of the human message.
+        - If any property is not clear from the human message, assign it the string "NOT SPECIFIED!!". Do not leave it blank or assign it any other value.
         - Keep property names descriptive.
         - Nest objects when needed.
         - Avoid unnecessary repetition.
         - Generate whatever points You think are relevant for building a successful roadmap for the course. 
         - If a particular property is relevant for building the roadmap, But the human didn't mention anything related to that property, create that property regardless.
-        - !!Donot assume the value of any property. In case it's not mentioned assign the string "NOT SPECIFIED!!"
-     '''
+      
+      # DOCS
+      COURSE_DETAILS is a python object with the following properties:
+      {course_details_description}
+      '''
      ),
      ("human", 
       "{text}")
@@ -95,6 +99,7 @@ clarifier_prompt = ChatPromptTemplate.from_messages([
          - You will be given a set of unspecified properties
          - Analyze all the unspecified properties.
          - Generate a set of questions.
+         - Personalize the questions as much as possible. Make them feel like they are being asked to an individual, not a course.
          - While asking questions subjectify the one directly talking to you. Try not to subjectify the course. In case , it has to be mentioned objectify the course.
             - ## EXAMPLE: 
                "What are the prerequisites for the course?"  ❌ Wrong
@@ -110,6 +115,7 @@ clarifier_prompt = ChatPromptTemplate.from_messages([
       Following is the set of all the unspecified properties: 
          {props}
       With the following being the context/description of those properties:
+      (!!NOTE - THIS IS A GENERAL DESCRIPTION OF THOSE PROPERTIES, IT DOES NOT SIGNIFY WHAT PROPERTIES ACTUALLY ARE, FOR THAT REFER TO THE props VARIABLE ABOVE. THIS IS JUST TO GIVE YOU AN IDEA ABOUT THE SIGNIFICANCE OF THOSE PROPERTIES IN THE CONTEXT OF COURSE BUILDING)
          {context}
       These are the properties that were not mentioned when asked about what course they wanted to create.
       Generate some questions relevant to clarify these properties.
@@ -178,4 +184,7 @@ def get_unspecified_properties(details_object: CourseDetails):
    for property, value in details_object.__dict__.items():
       if str(value).__contains__("NOT SPECIFIED"):
          unspecified_properties.append(property)
+   
+   print("\n\nUnspecified properties:")
+   print(unspecified_properties)
    return unspecified_properties

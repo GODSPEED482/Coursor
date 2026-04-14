@@ -12,8 +12,8 @@ class Validate(BaseModel):
 
 def get_llm():
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
-        thinking_budget=1024
+        model="gemini-2.5-flash-lite",
+        thinking_budget=2048,
     )
     return llm
 def get_llm_lite():
@@ -48,7 +48,7 @@ def print_dict(x: dict):
         print(f"{key}: {value}")
 
 def add_today(x):
-    x["today_date"] = date.today()
+    x["today_date"] = str(date.today())
     return x
 
 def flatten_dict(x: dict) -> dict:
