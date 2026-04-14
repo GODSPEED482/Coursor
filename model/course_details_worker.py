@@ -1,5 +1,18 @@
 import pika
 import json
+import argparse
+import os
+
+parser = argparse.ArgumentParser(description="Course Details Worker")
+parser.add_argument("--model", type=str, default="gemini-2.5-flash-lite", help="LLM model to use")
+parser.add_argument("--api-key", type=str, help="API key for the LLM")
+args, _ = parser.parse_known_args()
+
+if args.model:
+    os.environ["LLM_MODEL"] = args.model
+if args.api_key:
+    os.environ["GOOGLE_API_KEY"] = args.api_key
+
 from utils import get_description
 from workflow import course_details_workflow, course_analyzer_chain
 from interrogator_utils import CourseDetails
@@ -14,6 +27,9 @@ def on_consume(ch, method, properties, body):
         **data, 
         "course_details_description": str(get_description(CourseDetails))
     })
+    import time
+    print("Waiting 15 seconds to respect rate limits...")
+    time.sleep(15)
     print("Course details generated:", type(course_details))
     print(course_details)
     ch.basic_ack(delivery_tag=method.delivery_tag)

@@ -1,5 +1,18 @@
 import pika
 import json
+import argparse
+import os
+
+parser = argparse.ArgumentParser(description="Content Injector Worker")
+parser.add_argument("--model", type=str, default="gemini-2.5-flash-lite", help="LLM model to use")
+parser.add_argument("--api-key", type=str, help="API key for the LLM")
+args, _ = parser.parse_known_args()
+
+if args.model:
+    os.environ["LLM_MODEL"] = args.model
+if args.api_key:
+    os.environ["GOOGLE_API_KEY"] = args.api_key
+
 from workflow import content_injector_workflow
 from planner_utils import Skill
 def on_consume(ch, method, properties, body):
@@ -11,6 +24,9 @@ def on_consume(ch, method, properties, body):
     skill_content = content_injector_workflow.invoke({
         "input": Skill.model_validate_json(data)
     })
+    import time
+    print("Waiting 15 seconds to respect rate limits...")
+    time.sleep(15)
     print("Content generated for the skill:")
     print(type(skill_content))
     ch.basic_ack(delivery_tag=method.delivery_tag)

@@ -1,6 +1,19 @@
 import pika
 import json
 import uuid
+import argparse
+import os
+
+parser = argparse.ArgumentParser(description="Course Planner Worker")
+parser.add_argument("--model", type=str, default="gemini-2.5-flash-lite", help="LLM model to use")
+parser.add_argument("--api-key", type=str, help="API key for the LLM")
+args, _ = parser.parse_known_args()
+
+if args.model:
+    os.environ["LLM_MODEL"] = args.model
+if args.api_key:
+    os.environ["GOOGLE_API_KEY"] = args.api_key
+
 from workflow import planner_workflow
 
 # Helper function to obtain individual skills from the course_plan and publish them to the content_injector_queue for content generation
@@ -47,6 +60,9 @@ def on_consume(ch, method, properties, body):
     print(data)
     print("Invoking workflow...");
     curriculum = planner_workflow.invoke(data)
+    import time
+    print("Waiting 15 seconds to respect rate limits...")
+    time.sleep(15)
 
     course_plan = curriculum['course_plan'] #type: ignore
     prerequisite_plan = curriculum['prerequisite_plan'] #type: ignore

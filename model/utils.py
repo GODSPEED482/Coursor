@@ -1,3 +1,4 @@
+import os
 from dotenv import load_dotenv
 load_dotenv()
 from pydantic import BaseModel
@@ -11,16 +12,21 @@ class Validate(BaseModel):
 
 
 def get_llm():
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash-lite",
-        thinking_budget=2048,
-    )
+    model = os.environ.get("LLM_MODEL", "gemini-2.5-flash-lite")
+    kwargs = {"model": model, "thinking_budget": 1024}
+    api_key = os.environ.get("GOOGLE_API_KEY")
+    if api_key:
+        kwargs["api_key"] = api_key
+    llm = ChatGoogleGenerativeAI(**kwargs)
     return llm
+
 def get_llm_lite():
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash-lite",
-        thinking_budget=1024
-    )
+    model = os.environ.get("LLM_MODEL", "gemini-2.5-flash-lite")
+    kwargs = {"model": model, "thinking_budget": 512}
+    api_key = os.environ.get("GOOGLE_API_KEY")
+    if api_key:
+        kwargs["api_key"] = api_key
+    llm = ChatGoogleGenerativeAI(**kwargs)
     return llm
 
 
