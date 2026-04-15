@@ -1,13 +1,19 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
 const WebSocket = require('ws');
-const sessionManager = require('./sessionManager');
-const rabbitMQManager = require('./rabbitmq');
+const sessionManager = require('./utils/sessionManager');
+const rabbitMQManager = require('./utils/rabbitmq');
+const connectDB = require('./config/db');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Routes
+app.use('/api/auth', require('./routers/auth.route.js'));
+app.use('/api/courses', require('./routers/course.route.js'));
 
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
@@ -62,6 +68,7 @@ const PORT = process.env.PORT || 8080;
 
 async function bootstrap() {
     try {
+        await connectDB();
         await rabbitMQManager.init();
         server.listen(PORT, () => {
             console.log(`[Server] WebSocket & HTTP Server listening on port ${PORT}`);
