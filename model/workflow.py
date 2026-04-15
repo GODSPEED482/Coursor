@@ -45,37 +45,17 @@ def validate(response: str) -> bool:
 
 def modify(
         course_details: CourseDetails, 
-        unspecified_property: str, 
-        user_response: str
+        unspecified_properties: list[str], 
+        user_responses: list[str]
     ) -> CourseDetails:
         context_modifier_chain = context_modifier_prompt | course_details_llm
         return context_modifier_chain.invoke({
             "description": str(description),
             "course_details": str(course_details),
-            "unspecified_property": unspecified_property,
-            "user_response": user_response
+            "unspecified_properties": str(unspecified_properties),
+            "user_responses": str(user_responses)
         }) #type: ignore
 
-def ask_questions(questions: list[Interrogation], course_details: CourseDetails) -> CourseDetails:
-
-    for question in questions:
-        flag = 0
-        if question.unspecified_property == "deadline" : flag = 1
-        response = "hey"
-        while 1:
-            response = input(f"{question.clarification_question}\n")
-            if flag and validate(response): flag = 0
-            if flag == 0 : break
-            print("Not a valid date or date has already passed away.")
-        
-        
-        course_details = modify(
-            course_details=course_details,
-            unspecified_property=question.unspecified_property,
-            user_response=response
-        )
-    
-    return course_details
 
 
 
@@ -131,16 +111,35 @@ def log_course_details(course_details: CourseDetails):
 #                  Workflows
 # ==============================================
 
-course_details_workflow = (
-    course_analyzer_chain 
+def extract_initializer_output(x):
+    return {
+        "questions": [q.model_dump() for q in x["questions"]],
+        "course_details": x["course_details"].model_dump()
+    }
+
+course_details_initializer_workflow = (
+    RunnableParallel({
+        "course_details": course_analyzer_chain,
+    }) 
     | RunnableParallel({
-        "questions": clarifier_chain,
-        "course_details": RunnablePassthrough()
+        "questions": RunnableLambda(lambda x: x["course_details"]) | clarifier_chain,
+        "course_details": RunnableLambda(lambda x: x["course_details"]),
     })
-    # |(lambda x: {"questions": x["questions"], "course_details": log_course_details(x["course_details"])}) #type: ignore
-    |(lambda x: ask_questions(x["questions"], x["course_details"]))#type: ignore
-    |(lambda x: x.__dict__)
-    |(lambda x: add_today(x))
+    | RunnableLambda(extract_initializer_output)
+)
+
+def finalizer_modifier(data):
+    cd = CourseDetails(**data["course_details"])
+    return modify(
+        course_details=cd,
+        unspecified_properties=data["unspecified_properties"],
+        user_responses=data["user_responses"]
+    )
+
+course_details_finalizer_workflow = (
+    RunnableLambda(finalizer_modifier)
+    | RunnableLambda(lambda x: x.__dict__)
+    | RunnableLambda(lambda x: add_today(x))
 )
 
 time_divider_workflow = (

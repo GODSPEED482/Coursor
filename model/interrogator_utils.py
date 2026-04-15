@@ -148,8 +148,8 @@ context_modifier_prompt = ChatPromptTemplate.from_messages([
       "human",
       """
          - COURSE_DETAILS: {course_details}
-         - UNSPECIFIED_PROPERTY: {unspecified_property}
-         - USER_RESPONSE: {user_response}
+         - UNSPECIFIED_PROPERTY: {unspecified_properties}
+         - USER_RESPONSE: {user_responses}
          Generate an updated COURSE_DETAILS object accordingly.
       
       """
