@@ -67,8 +67,30 @@ export default function CourseStudio() {
             if (ws) {
                 ws.close();
             }
+
+            // Save finalized course to DB
+            const token = localStorage.getItem('token');
+            if (token && coursePlan && Object.keys(skillsMap).length > 0) {
+                fetch('http://localhost:8080/api/courses', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        title: coursePlan?.course_plan?.name || Object.values(skillsMap)[0]?.name || 'My Generated Course',
+                        coursePlan: coursePlan,
+                        skillsMap: skillsMap
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    setLogs(prev => [...prev, { type: 'client', status: 'Course saved successfully to your account vault!'}]);
+                })
+                .catch(err => console.error('Database Sync Error:', err));
+            }
         }
-    }, [stats.generatedSkills, stats.totalSkills, ws]);
+    }, [stats.generatedSkills, stats.totalSkills, ws, coursePlan, skillsMap]);
 
     const handleMessage = (socket, payload) => {
         if (payload.type === 'connected') {
