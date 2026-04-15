@@ -83,13 +83,24 @@ export default function CourseStudio() {
             setLogs(prev => [...prev, payload.data]);
         }
         else if (payload.type === 'question') {
-            setQuestionData(payload.data);
-            // Reset answer fields
-            const initialAnswers = {};
-            (payload.data.questions || []).forEach((q, idx) => {
-                initialAnswers[idx] = "";
-            });
-            setAnswerFields(initialAnswers);
+            const questions = payload.data.questions || [];
+            
+            if (questions.length === 0) {
+                socket.send(JSON.stringify({
+                    action: 'answer_questions',
+                    course_details: payload.data.course_details,
+                    unspecified_properties: [],
+                    user_responses: []
+                }));
+                setLogs(prev => [...prev, { type: 'client', status: 'No clarification needed. Yielding to finalization...'}]);
+            } else {
+                setQuestionData(payload.data);
+                const initialAnswers = {};
+                questions.forEach((q, idx) => {
+                    initialAnswers[idx] = "";
+                });
+                setAnswerFields(initialAnswers);
+            }
         }
         else if (payload.type === 'plan') {
             setCoursePlan(payload.data);
@@ -303,9 +314,6 @@ export default function CourseStudio() {
                                         <a href={para.video.url} target="_blank" rel="noreferrer" style={{color: 'var(--accent-color)'}}>Watch on YouTube</a>
                                     </p>
                                 )}
-                                <p style={{color: 'var(--text-secondary)', fontSize: '0.9rem', opacity: 0.8}}>
-                                    Channel: <strong style={{color: 'var(--text-primary)'}}>{para.video.channel_name}</strong> &nbsp;|&nbsp; Difficulty: {para.video.difficulty} &nbsp;|&nbsp; Duration: {para.video.duration_minutes} min
-                                </p>
                             </div>
                         )
                     }

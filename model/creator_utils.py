@@ -25,12 +25,6 @@ class VideoResource(BaseModel):
     type: Literal["video"] = "video"  # Discriminator field
     title: str = Field(..., description="Title of the video")
     url: str = Field(..., description="YouTube video URL")
-    channel_name: str = Field(default="", description="Name of the YouTube channel")
-    duration_minutes: int = Field(default=0, description="Length of the video in minutes")
-    difficulty: str = Field(
-        default="Beginner",
-        description="Beginner / Intermediate / Advanced"
-    )
 
 class Pointer(BaseModel):
     """A data structure to store pointers for bullet points."""

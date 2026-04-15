@@ -15,6 +15,7 @@ if args.api_key:
 
 from workflow import content_injector_workflow
 from planner_utils import Skill
+from youtube_helper import get_youtube_video_details
 
 def log(ch, properties, type, status, identifier=None):
     ch.basic_publish(
@@ -43,6 +44,16 @@ def on_consume(ch, method, properties, body):
         import time
         print("Waiting 15 seconds to respect rate limits...")
         time.sleep(15)
+        
+        if skill_content.body:
+            for para in skill_content.body:
+                if para.content_type == "video" and para.video is not None:
+                    print(f"Resolving YouTube link for: {para.video.title}")
+                    video_info = get_youtube_video_details(para.video.title)
+                    if video_info:
+                        para.video.url = video_info["url"]
+                        print(f"Found real link: {para.video.url}")
+
         log(ch, properties, "info", "skill_gen_fin", identifier)
         print("Content generated for the skill:")
         print(type(skill_content))
