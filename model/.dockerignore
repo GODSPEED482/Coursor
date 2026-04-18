@@ -7,5 +7,3 @@ venv
 *.log
 Dockerfile
 .dockerignore
-entrypoint.sh
-healthcheck.py
