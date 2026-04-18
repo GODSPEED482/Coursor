@@ -5,6 +5,8 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
+    g++ \
+    make \
     python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
@@ -22,7 +24,7 @@ RUN chmod +x entrypoint.sh
 EXPOSE 8080
 
 # Environment variables (to be overridden at runtime)
-ENV WORKER_FILE=course_planner_worker.py
+ENV WORKER_FILE=init.py
 
 # Launch via entrypoint
 ENTRYPOINT ["./entrypoint.sh"]
