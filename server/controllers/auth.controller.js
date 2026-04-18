@@ -31,10 +31,8 @@ exports.googleLogin = async (req, res) => {
         }
 
         const jwtPayload = { user: { id: user.id } };
-        jwt.sign(jwtPayload, process.env.JWT_SECRET, { expiresIn: '7d' }, (err, token) => {
-            if (err) throw err;
-            res.json({ token });
-        });
+        const token = jwt.sign(jwtPayload, process.env.JWT_SECRET, { expiresIn: '7d' });
+        res.json({ token });
     } catch (err) {
         console.error("Google Auth error:", err);
         res.status(401).json({ message: 'Google Authentication Failed' });
@@ -58,13 +56,11 @@ exports.register = async (req, res) => {
         await user.save();
 
         const payload = { user: { id: user.id } };
-        jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' }, (err, token) => {
-            if (err) throw err;
-            res.json({ token });
-        });
+        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
+        res.json({ token });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        console.error("Registration error:", err.message);
+        res.status(500).json({ message: 'Server Error during registration' });
     }
 };
 
@@ -77,18 +73,23 @@ exports.login = async (req, res) => {
             return res.status(400).json({ message: 'Invalid Credentials' });
         }
 
+        // Check if user has a password (they might have registered via Google)
+        if (!user.password) {
+            return res.status(400).json({ 
+                message: 'This account was created with Google. Please use Google Sign-In.' 
+            });
+        }
+
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(400).json({ message: 'Invalid Credentials' });
         }
 
         const payload = { user: { id: user.id } };
-        jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' }, (err, token) => {
-            if (err) throw err;
-            res.json({ token });
-        });
+        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
+        res.json({ token });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        console.error("Login error:", err.message);
+        res.status(500).json({ message: 'Server Error during login' });
     }
 };

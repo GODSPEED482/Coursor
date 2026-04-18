@@ -4,6 +4,8 @@ import { useAuth } from './AuthContext';
 import { LogIn, UserPlus } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 
+import { styles } from './Auth.styles';
+
 export default function Auth() {
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
@@ -21,7 +23,7 @@ export default function Auth() {
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.message || 'Google Auth Failed');
-            
+
             login(data.token);
             navigate('/');
         } catch (err) {
@@ -32,41 +34,50 @@ export default function Auth() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-        
+
         const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
-        
+
         try {
             const res = await fetch(`http://localhost:8080${endpoint}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
             });
-            
-            const data = await res.json();
+
+            let data;
+            const contentType = res.headers.get("content-type");
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                data = await res.json();
+            } else {
+                const text = await res.text();
+                throw new Error(text || 'Server Error: Received non-JSON response');
+            }
+
             if (!res.ok) {
                 throw new Error(data.message || 'Authentication Failed');
             }
-            
+
             login(data.token);
             navigate('/');
         } catch (err) {
+            console.error("Auth Error:", err);
             setError(err.message);
         }
     };
 
     return (
-        <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle at center, #631f50 0%, #000000 100%)', animation: 'breathe 8s infinite alternate ease-in-out' }}>
-            <div className="glass-panel" style={{ width: '400px', padding: '40px', borderRadius: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                <div style={{ textAlign: 'center' }}>
-                    <h1 style={{ fontSize: '2rem', marginBottom: '8px' }}>Coursor AI</h1>
-                    <p style={{ color: 'var(--text-secondary)' }}>
+        <div style={styles.container}>
+            <div className="glass-panel" style={styles.glassPanel}>
+                <div style={styles.header}>
+                    <h1 style={styles.title}>Coursor AI</h1>
+                    <p style={styles.subtitle}>
                         {isLogin ? 'Sign back into your learning journey' : 'Begin your personalized journey'}
                     </p>
                 </div>
-                
-                {error && <div style={{ color: 'var(--error)', background: 'rgba(255,50,50,0.1)', padding: '12px', border: '1px solid var(--error)', borderRadius: '8px', textAlign: 'center', fontSize: '0.9rem' }}>{error}</div>}
-                
-                <div style={{ display: 'flex', justifyContent: 'center' }}>
+
+                {error && <div style={styles.errorBox}>{error}</div>}
+
+                <div style={styles.googleWrapper}>
                     <GoogleLogin
                         onSuccess={handleGoogleSuccess}
                         onError={() => setError('Google Authentication Popup Closed or Failed')}
@@ -77,41 +88,43 @@ export default function Auth() {
                     />
                 </div>
 
-                <div style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                <div style={styles.divider}>
                     &mdash; OR CONTINUE WITH EMAIL &mdash;
                 </div>
 
-                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div className="pill-input-container" style={{ padding: '8px 16px', borderRadius: '12px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)' }}>
-                        <input 
-                            type="email" 
+                <form onSubmit={handleSubmit} style={styles.form}>
+                    <div className="pill-input-container" style={styles.inputContainer}>
+                        <input
+                            type="email"
                             placeholder="Email address"
                             className="input-field"
                             value={email}
+                            style={styles.input}
                             onChange={(e) => setEmail(e.target.value)}
                             required
                         />
                     </div>
-                    <div className="pill-input-container" style={{ padding: '8px 16px', borderRadius: '12px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)' }}>
-                        <input 
-                            type="password" 
+                    <div className="pill-input-container" style={styles.inputContainer}>
+                        <input
+                            type="password"
                             placeholder="Password"
                             className="input-field"
                             value={password}
+                            style={styles.input}
                             onChange={(e) => setPassword(e.target.value)}
                             required
                         />
                     </div>
-                    <button type="submit" className="btn-primary" style={{ marginTop: '8px', borderRadius: '12px', display: 'flex', justifyContent: 'center', gap: '8px' }}>
+                    <button type="submit" className="btn-primary" style={styles.submitBtn}>
                         {isLogin ? <><LogIn size={18} /> Authenticate</> : <><UserPlus size={18} /> Register</>}
                     </button>
                 </form>
 
-                <div style={{ textAlign: 'center', marginTop: '8px' }}>
-                    <button 
+                <div style={styles.switchAuthWrapper}>
+                    <button
                         type="button"
-                        onClick={() => setIsLogin(!isLogin)} 
-                        style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.9rem', textDecoration: 'underline' }}
+                        onClick={() => setIsLogin(!isLogin)}
+                        style={styles.switchAuthBtn}
                     >
                         {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Log In"}
                     </button>
