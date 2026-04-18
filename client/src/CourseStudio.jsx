@@ -1,14 +1,16 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Send, Terminal, BookOpen, Loader, CheckCircle } from 'lucide-react';
+import { styles } from './CourseStudio.styles';
 
 export default function CourseStudio() {
     const location = useLocation();
     const navigate = useNavigate();
-    const { initialPrompt } = location.state || {};
+    const { initialPrompt, savedCourse } = location.state || {};
 
+    const { id: urlSessionId } = useParams();
     const [ws, setWs] = useState(null);
-    const [sessionId, setSessionId] = useState(null);
+    const [sessionId, setSessionId] = useState(urlSessionId);
     
     // Core Data States
     const [logs, setLogs] = useState([]);
@@ -34,15 +36,40 @@ export default function CourseStudio() {
 
     // Initial WebSocket Connection
     useEffect(() => {
-        if (!initialPrompt) {
+        if (!initialPrompt && !savedCourse && !urlSessionId) {
             navigate('/');
+            return;
+        }
+
+        if (savedCourse) {
+            setCoursePlan(savedCourse.coursePlan);
+            setSkillsMap(savedCourse.skillsMap);
+            setLogs([{ type: 'client', status: `Viewing saved course: ${savedCourse.title}` }]);
+            
+            // Re-calculate stats
+            let total = 0;
+            const countSkills = (planObj) => {
+                if(!planObj || !planObj.sections) return 0;
+                let c = 0;
+                planObj.sections.forEach(s => {
+                    c += (s.skills ? s.skills.length : 0);
+                });
+                return c;
+            };
+            total += countSkills(savedCourse.coursePlan.course_plan);
+            total += countSkills(savedCourse.coursePlan.prerequisite_plan);
+            setStats({ totalSkills: total, generatedSkills: total });
             return;
         }
 
         const socket = new WebSocket('ws://localhost:8080');
         
         socket.onopen = () => {
-            console.log("Connected to server...");
+            console.log("Connected to server. Initializing session...");
+            socket.send(JSON.stringify({
+                action: 'init_session',
+                sessionId: urlSessionId
+            }));
         };
 
         socket.onmessage = (event) => {
@@ -60,8 +87,9 @@ export default function CourseStudio() {
         logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [logs]);
 
-    // Determine completion
+    // Determine completion (Only for new generations)
     useEffect(() => {
+        if (!initialPrompt) return; // Don't trigger for saved courses
         if (stats.totalSkills > 0 && stats.generatedSkills >= stats.totalSkills) {
             console.log("All skills generated. Closing socket.");
             if (ws) {
@@ -80,7 +108,8 @@ export default function CourseStudio() {
                     body: JSON.stringify({
                         title: coursePlan?.course_plan?.name || Object.values(skillsMap)[0]?.name || 'My Generated Course',
                         coursePlan: coursePlan,
-                        skillsMap: skillsMap
+                        skillsMap: skillsMap,
+                        sessionId: urlSessionId
                     })
                 })
                 .then(res => res.json())
@@ -95,13 +124,26 @@ export default function CourseStudio() {
     const handleMessage = (socket, payload) => {
         if (payload.type === 'connected') {
             setSessionId(payload.sessionId);
-            // Initiate the course pipeline
-            socket.send(JSON.stringify({
-                action: 'start_course',
-                text: initialPrompt
-            }));
-        } 
-        else if (payload.type === 'log') {
+            
+            // Only initiate a new course generation if we have an initialPrompt
+            // and we haven't received a plan yet (prevents double start on reload)
+            if (initialPrompt && !coursePlan) {
+                console.log("Initiating new course pipeline...");
+                socket.send(JSON.stringify({
+                    action: 'start_course',
+                    text: initialPrompt
+                }));
+            } else if (!initialPrompt && !coursePlan) {
+                console.log("Reconnected. Waiting for state or requesting course data...");
+                // In a true "reconnect", we might send a 'get_state' action here.
+                // For now, if the pipeline is still active, RabbitMQ messages will start arriving.
+                // If the course is finished, the server's Redundancy Check will send the plan.
+                socket.send(JSON.stringify({
+                    action: 'start_course',
+                    text: 'RECONNECT' // The server start_course logic handles existed courses
+                }));
+            }
+        }        else if (payload.type === 'log') {
             setLogs(prev => [...prev, payload.data]);
         }
         else if (payload.type === 'question') {
@@ -154,6 +196,26 @@ export default function CourseStudio() {
             
             setActiveSkillId(cur => cur ? cur : key);
         }
+        else if (payload.type === 'rehydrate') {
+            const { coursePlan, skillsMap } = payload.data;
+            setCoursePlan(coursePlan);
+            setSkillsMap(skillsMap);
+            
+            // Re-calculate stats
+            let total = 0;
+            const countSkills = (planObj) => {
+                if(!planObj || !planObj.sections) return 0;
+                let c = 0;
+                planObj.sections.forEach(s => {
+                    c += (s.skills ? s.skills.length : 0);
+                });
+                return c;
+            };
+            total += countSkills(coursePlan.course_plan);
+            total += countSkills(coursePlan.prerequisite_plan);
+            setStats({ totalSkills: total, generatedSkills: Object.keys(skillsMap).length });
+            setLogs(prev => [...prev, { type: 'client', status: `Successfully rehydrated course session.` }]);
+        }
         else if (payload.type === 'error') {
             setLogs(prev => [...prev, { type: 'error', status: payload.message }]);
         }
@@ -184,9 +246,9 @@ export default function CourseStudio() {
     const renderRoadmap = () => {
         if (!coursePlan) {
             return (
-                <div style={{color: 'var(--text-secondary)', display: 'flex', alignItems:'center', gap: '8px'}}>
+                <div style={styles.gatheringBlueprint}>
                     {/* Add basic spin animation in index.css for rotation */}
-                    <Loader size={16} style={{animation: 'spin 2s linear infinite'}} /> Gathering Blueprint...
+                    <Loader size={16} style={styles.loaderInline} /> Gathering Blueprint...
                 </div>
             );
         }
@@ -195,7 +257,7 @@ export default function CourseStudio() {
             if (!planObj || !planObj.sections) return null;
             return planObj.sections.map((sec, dayNo) => (
                 <div key={`${isMain ? 'main' : 'pre'}-day-${dayNo}`} style={{marginBottom: '16px'}}>
-                    <h4 style={{fontSize:'0.9rem', color: isMain? 'var(--text-primary)' : 'var(--text-secondary)', marginBottom: '8px'}}>Day {dayNo+1}: {sec.title}</h4>
+                    <h4 style={styles.roadmapDayHeading(isMain)}>Day {dayNo+1}: {sec.title}</h4>
                     {(sec.skills || []).map((sk, skillNo) => {
                         const sKey = `${dayNo}-${skillNo}-${isMain ? 'main' : 'pre'}`;
                         const isGen = !!skillsMap[sKey];
@@ -206,8 +268,8 @@ export default function CourseStudio() {
                                 className={`roadmap-item ${isActive ? 'active' : ''}`}
                                 onClick={() => setActiveSkillId(sKey)}
                             >
-                                <span style={{display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem'}}>
-                                    {isGen ? <CheckCircle size={14} color="var(--success)"/> : <Loader size={12} color="var(--text-secondary)" style={{animation: 'spin 2s linear infinite'}}/>}
+                                <span style={styles.roadmapItemIcon}>
+                                    {isGen ? <CheckCircle size={14} color="var(--success)"/> : <Loader size={12} color="var(--text-secondary)" style={styles.loaderInline}/>}
                                     {sk.name}
                                 </span>
                             </div>
@@ -219,21 +281,21 @@ export default function CourseStudio() {
 
         return (
             <>
-                <h3 style={{marginBottom:'16px', display:'flex', alignItems:'center', gap:'8px'}}><BookOpen size={18}/> Course Roadmap</h3>
-                <div style={{fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '16px'}}>
+                <h3 style={styles.roadmapHeader}><BookOpen size={18}/> Course Roadmap</h3>
+                <div style={styles.roadmapProgress}>
                     Progress: {stats.generatedSkills} / {stats.totalSkills} Skills
                     {stats.totalSkills > 0 && stats.generatedSkills >= stats.totalSkills && (
-                        <span style={{color: 'var(--success)', marginLeft:'8px'}}>- Complete!</span>
+                        <span style={styles.roadmapComplete}>- Complete!</span>
                     )}
                 </div>
                 {coursePlan.prerequisite_plan && coursePlan.prerequisite_plan.sections.length > 0 && (
-                    <div style={{paddingBottom: '16px', borderBottom: '1px solid var(--border-color)', marginBottom: '16px'}}>
-                        <h4 style={{marginBottom:'12px', fontSize:'0.9rem', textTransform:'uppercase', letterSpacing: '1px', color:'var(--warning)'}}>Prerequisites</h4>
+                    <div style={styles.roadmapPreReqContainer}>
+                        <h4 style={styles.roadmapPreReqTitle}>Prerequisites</h4>
                         {renderPlanSections(coursePlan.prerequisite_plan, false)}
                     </div>
                 )}
                 <div>
-                   <h4 style={{marginBottom:'12px', fontSize:'0.9rem', textTransform:'uppercase', letterSpacing: '1px', color:'var(--accent-color)'}}>Main Curriculum</h4>
+                   <h4 style={styles.roadmapCurriculumTitle}>Main Curriculum</h4>
                     {renderPlanSections(coursePlan.course_plan, true)}
                 </div>
             </>
@@ -260,14 +322,14 @@ export default function CourseStudio() {
 
     const renderMainContent = () => {
         if (!activeSkillId) {
-            return <div style={{opacity: 0.5, textAlign: 'center', marginTop: '100px'}}>Select a skill from the roadmap to view contents...</div>;
+            return <div style={styles.mainContentPlaceholder}>Select a skill from the roadmap to view contents...</div>;
         }
         
         const skillData = skillsMap[activeSkillId];
         if (!skillData) {
             return (
-                <div style={{display:'flex', alignItems:'center', justifyContent:'center', height:'100%', flexDirection:'column', gap:'16px', color:'var(--text-secondary)'}}>
-                    <Loader size={32} style={{animation: 'spin 2s linear infinite'}} />
+                <div style={styles.mainContentLoading}>
+                    <Loader size={32} style={styles.loaderInline} />
                     <p>Generating AI Content for this skill...</p>
                 </div>
             );
@@ -275,17 +337,17 @@ export default function CourseStudio() {
 
         return (
             <div>
-                <h1 style={{fontSize:'2rem', marginBottom: '8px'}}>{skillData.name}</h1>
+                <h1 style={styles.mainTitle}>{skillData.name}</h1>
                 {skillData.introduction && (
-                    <p style={{color: 'var(--text-secondary)', marginBottom:'24px', fontSize:'1.1rem'}}>{skillData.introduction}</p>
+                    <p style={styles.mainIntro}>{skillData.introduction}</p>
                 )}
                 
                 {skillData.body && skillData.body.map((para, idx) => {
                     if (para.content_type === 'bullet' && para.bullet) {
                         return (
-                            <div key={idx} className="glass-panel" style={{padding:'20px', marginBottom:'24px'}}>
-                                <h3 style={{marginBottom:'12px', color:'var(--accent-color)'}}>{para.bullet.title}</h3>
-                                <ul style={{paddingLeft: '20px', display:'flex', flexDirection:'column', gap:'12px'}}>
+                            <div key={idx} className="glass-panel" style={styles.bulletContainer}>
+                                <h3 style={styles.bulletTitle}>{para.bullet.title}</h3>
+                                <ul style={styles.bulletPointers}>
                                     {para.bullet.pointers.map((pt, i) => (
                                         <li key={i}>
                                             <strong>{pt.head}:</strong> {pt.body}
@@ -297,18 +359,18 @@ export default function CourseStudio() {
                     }
                     if (para.content_type === 'table' && para.table) {
                         return (
-                            <div key={idx} className="glass-panel" style={{padding:'20px', marginBottom:'24px', overflowX: 'auto'}}>
-                                <h3 style={{marginBottom:'12px', color:'var(--accent-color)'}}>{para.table.title}</h3>
-                                <table style={{width: '100%', borderCollapse: 'collapse', textAlign: 'left'}}>
+                            <div key={idx} className="glass-panel" style={styles.tableContainer}>
+                                <h3 style={styles.tableTitle}>{para.table.title}</h3>
+                                <table style={styles.table}>
                                     <thead>
                                         <tr>
-                                            {para.table.header?.values?.map((v, i) => <th key={i} style={{borderBottom:'1px solid var(--border-color)', padding:'8px'}}>{v}</th>)}
+                                            {para.table.header?.values?.map((v, i) => <th key={i} style={styles.tableHeaderCell}>{v}</th>)}
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {para.table.body?.map((row, i) => (
                                             <tr key={i}>
-                                                {row.values?.map((v, j) => <td key={j} style={{borderBottom:'1px solid rgba(255,255,255,0.05)', padding:'8px'}}>{v}</td>)}
+                                                {row.values?.map((v, j) => <td key={j} style={styles.tableBodyCell}>{v}</td>)}
                                             </tr>
                                         ))}
                                     </tbody>
@@ -319,21 +381,21 @@ export default function CourseStudio() {
                     if (para.content_type === 'video' && para.video) {
                         const embedUrl = extractYouTubeEmbedUrl(para.video.url);
                         return (
-                            <div key={idx} className="glass-panel" style={{padding:'20px', marginBottom:'24px'}}>
-                                <h3 style={{marginBottom:'12px', color:'var(--warning)'}}>Video Resource: {para.video.title}</h3>
+                            <div key={idx} className="glass-panel" style={styles.videoContainer}>
+                                <h3 style={styles.videoTitle}>Video Resource: {para.video.title}</h3>
                                 {embedUrl ? (
-                                    <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', maxWidth: '100%', marginBottom: '16px', borderRadius: '8px' }}>
+                                    <div style={styles.videoIframeWrapper}>
                                         <iframe 
                                             src={embedUrl}
-                                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                                            style={styles.videoIframe}
                                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                                             allowFullScreen
                                             title={para.video.title}
                                         />
                                     </div>
                                 ) : (
-                                    <p style={{color: 'var(--text-secondary)', marginBottom: '8px'}}>
-                                        <a href={para.video.url} target="_blank" rel="noreferrer" style={{color: 'var(--accent-color)'}}>Watch on YouTube</a>
+                                    <p style={styles.videoFallback}>
+                                        <a href={para.video.url} target="_blank" rel="noreferrer" style={styles.videoLink}>Watch on YouTube</a>
                                     </p>
                                 )}
                             </div>
@@ -343,8 +405,8 @@ export default function CourseStudio() {
                 })}
 
                 {skillData.conclusion && (
-                    <div className="glass-panel" style={{padding:'20px', marginTop: '24px'}}>
-                        <h3 style={{marginBottom:'12px', color:'var(--success)'}}>Conclusion</h3>
+                    <div className="glass-panel" style={styles.conclusionContainer}>
+                        <h3 style={styles.conclusionTitle}>Conclusion</h3>
                         <p>{skillData.conclusion}</p>
                     </div>
                 )}
@@ -364,27 +426,27 @@ export default function CourseStudio() {
 
             <div className="glass-panel copilot-col">
                 {/* Copilot Interface */}
-                <div className="copilot-panel" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '16px' }}>
-                    <div style={{padding:'16px', display:'flex', flexDirection:'column', gap:'16px', flex:1, overflowY:'auto'}}>
-                        <h3 style={{display:'flex', alignItems:'center', gap:'8px'}}><Sparkles size={18} color="var(--accent-color)"/> Copilot</h3>
+                <div className="copilot-panel" style={styles.copilotHeaderContainer}>
+                    <div style={styles.copilotScrollArea}>
+                        <h3 style={styles.copilotTitle}><Sparkles size={18} color="var(--accent-color)"/> Copilot</h3>
                         
                         {!questionData && !coursePlan && (
-                            <p style={{color:'var(--text-secondary)', fontSize:'0.9rem', fontStyle:'italic'}}>
+                            <p style={styles.copilotAnalysing}>
                                 Analyzing prompt and orchestrating course blueprint...
                             </p>
                         )}
                         {!questionData && coursePlan && (
-                            <p style={{color:'var(--success)', fontSize:'0.9rem'}}>
+                            <p style={styles.copilotApproved}>
                                 Blueprint Approved. Questioning phase locked.
                             </p>
                         )}
                         
                         {questionData && questionData.questions && questionData.questions.map((q, idx) => (
-                            <div key={idx} style={{background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '8px'}}>
-                                <p style={{fontSize: '0.9rem', marginBottom: '8px', fontWeight: 600}}>{q.clarification_question}</p>
+                            <div key={idx} style={styles.questionCard}>
+                                <p style={styles.questionText}>{q.clarification_question}</p>
                                 <textarea 
                                     className="input-field" 
-                                    style={{fontSize:'0.85rem', padding:'8px'}} 
+                                    style={styles.questionInput} 
                                     rows={2}
                                     placeholder="Your answer..."
                                     value={answerFields[idx] || ""}
@@ -393,10 +455,10 @@ export default function CourseStudio() {
                             </div>
                         ))}
                     </div>
-                    <div style={{padding: '0 16px', marginTop: 'auto'}}>
+                    <div style={styles.submitBtnWrapper}>
                         <button 
                             className="btn-primary" 
-                            style={{width: '100%', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px'}}
+                            style={styles.submitBtn}
                             disabled={!questionData}
                             onClick={submitAnswers}
                         >
@@ -407,15 +469,15 @@ export default function CourseStudio() {
 
                 {/* Log Stream */}
                 <div className="copilot-panel">
-                    <div style={{padding: '16px 16px 8px', borderBottom: '1px solid rgba(255,255,255,0.05)'}}>
-                         <h3 style={{display:'flex', alignItems:'center', gap:'8px', fontSize:'0.9rem'}}><Terminal size={16}/> Pipeline Feed</h3>
+                    <div style={styles.logFeedHeader}>
+                         <h3 style={styles.logFeedTitle}><Terminal size={16}/> Pipeline Feed</h3>
                     </div>
-                    <div style={{flex: 1, padding: '8px', overflowY: 'auto', background: 'rgba(0,0,0,0.2)'}}>
+                    <div style={styles.logFeedBody}>
                         {logs.map((L, i) => (
                             <div key={i} className="log-entry">
                                 <span className="log-status-info">[{L.type}]</span>
                                 <span>{subjectiveLogs[L.status] || L.status}</span>
-                                {L.identifier && <span style={{marginLeft:'8px', opacity:0.5}}>(Day {L.identifier.day_no + 1}, Skill {L.identifier.skill_no + 1})</span>}
+                                {L.identifier && <span style={styles.logIdentifier}>(Day {L.identifier.day_no + 1}, Skill {L.identifier.skill_no + 1})</span>}
                             </div>
                         ))}
                         <div ref={logEndRef} />

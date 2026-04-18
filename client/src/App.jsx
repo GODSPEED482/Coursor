@@ -5,6 +5,7 @@ import Landing from './Landing';
 import CourseStudio from './CourseStudio';
 import Auth from './Auth';
 import { AuthProvider, useAuth } from './AuthContext';
+import LogoutButton from './LogoutButton';
 
 function ProtectedRoute({ children }) {
     const { isAuthenticated } = useAuth();
@@ -17,10 +18,11 @@ function App() {
         <AuthProvider>
             <BrowserRouter>
               <div className="app-container">
+                <LogoutButton />
                 <Routes>
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/" element={<ProtectedRoute><Landing /></ProtectedRoute>} />
-                  <Route path="/studio" element={<ProtectedRoute><CourseStudio /></ProtectedRoute>} />
+                  <Route path="/studio/:id" element={<ProtectedRoute><CourseStudio /></ProtectedRoute>} />
                 </Routes>
               </div>
             </BrowserRouter>
