@@ -1,0 +1,11 @@
+__pycache__
+venv
+.env
+.git
+.gitignore
+*.jsonl
+*.log
+Dockerfile
+.dockerignore
+entrypoint.sh
+healthcheck.py
