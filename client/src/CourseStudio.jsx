@@ -62,7 +62,8 @@ export default function CourseStudio() {
             return;
         }
 
-        const socket = new WebSocket('wss://coursor-backend.onrender.com');
+        const wsUrl = import.meta.env.VITE_BACKEND_URL.replace(/^http/, 'ws');
+        const socket = new WebSocket(wsUrl);
         
         socket.onopen = () => {
             console.log("Connected to server. Initializing session...");
@@ -99,7 +100,7 @@ export default function CourseStudio() {
             // Save finalized course to DB
             const token = localStorage.getItem('token');
             if (token && coursePlan && Object.keys(skillsMap).length > 0) {
-                fetch('https://coursor-backend.onrender.com/api/courses', {
+                fetch(`${import.meta.env.VITE_BACKEND_URL}/api/courses`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

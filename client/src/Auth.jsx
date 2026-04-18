@@ -16,7 +16,7 @@ export default function Auth() {
 
     const handleGoogleSuccess = async (credentialResponse) => {
         try {
-            const res = await fetch(`https://coursor-backend.onrender.com/api/auth/google`, {
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/google`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ credential: credentialResponse.credential })
@@ -38,7 +38,7 @@ export default function Auth() {
         const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
 
         try {
-            const res = await fetch(`https://coursor-backend.onrender.com${endpoint}`, {
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}${endpoint}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
