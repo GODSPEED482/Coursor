@@ -13,6 +13,9 @@ if args.model:
 if args.api_key:
     os.environ["GOOGLE_API_KEY"] = args.api_key
 
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(__file__), '../rabbitmq.env'))
+
 from workflow import course_details_finalizer_workflow
 
 def log(ch, properties, type, status):
@@ -46,7 +49,7 @@ def on_consume(ch, method, properties, body):
         # Send to planner queue
         ch.basic_publish(
             exchange='', 
-            routing_key="course_planner_queue", 
+            routing_key=os.environ.get('PLANNER_QUEUE', "course_planner_queue"), 
             body=json.dumps(final_course_details), 
             properties=properties
         )
@@ -57,12 +60,15 @@ def on_consume(ch, method, properties, body):
 
 
 def main():
-    connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost', heartbeat=0))
+    rabbitmq_url = os.environ.get('RABBITMQ_URL', 'amqp://localhost')
+    print(f"Connecting to RabbitMQ at {os.environ.get('RABBITMQ_HOST', 'localhost')}...")
+    connection = pika.BlockingConnection(pika.URLParameters(rabbitmq_url))
     channel = connection.channel()
-    channel.queue_declare(queue='course_details_finalizer_queue')
+    queue_name = os.environ.get('FINALIZER_QUEUE', 'course_details_finalizer_queue')
+    channel.queue_declare(queue=queue_name)
     channel.basic_qos(prefetch_count=1)
-    channel.basic_consume(queue='course_details_finalizer_queue', on_message_callback=on_consume)
-    print("Waiting for messages on course_details_finalizer_queue...")
+    channel.basic_consume(queue=queue_name, on_message_callback=on_consume)
+    print(f"Waiting for messages on {queue_name}...")
     channel.start_consuming()
 
 if __name__ == "__main__":

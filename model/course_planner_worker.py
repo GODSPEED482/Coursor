@@ -14,6 +14,9 @@ if args.model:
 if args.api_key:
     os.environ["GOOGLE_API_KEY"] = args.api_key
 
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(__file__), '../rabbitmq.env'))
+
 from workflow import planner_workflow
 
 # Helper function to obtain individual skills from the course_plan and publish them to the content_injector_queue for content generation
@@ -33,7 +36,7 @@ def generate_content(ch, curriculum, properties):
                         "skill_no": skill_no
                     }
                 )
-                publish(ch, "content_injector_queue", message, properties)
+                publish(ch, os.environ.get('INJECTOR_QUEUE', "content_injector_queue"), message, properties)
                 identifier = {"day_no": day_no, "skill_no": skill_no, "is_main_content": True}
                 log(ch, properties, "info", "skill_queued", identifier)
     
@@ -52,7 +55,7 @@ def generate_content(ch, curriculum, properties):
                             "skill_no": skill_no
                         }
                     )
-                    publish(ch, "content_injector_queue", message, properties)
+                    publish(ch, os.environ.get('INJECTOR_QUEUE', "content_injector_queue"), message, properties)
                     identifier = {"day_no": day_no, "skill_no": skill_no, "is_main_content": False}
                     log(ch, properties, "info", "skill_queued", identifier)
     
@@ -115,12 +118,15 @@ def on_consume(ch, method, properties, body):
     
 
 def main():
-    connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost', heartbeat=0))
+    rabbitmq_url = os.environ.get('RABBITMQ_URL', 'amqp://localhost')
+    print(f"Connecting to RabbitMQ at {os.environ.get('RABBITMQ_HOST', 'localhost')}...")
+    connection = pika.BlockingConnection(pika.URLParameters(rabbitmq_url))
     channel = connection.channel()
-    channel.queue_declare(queue='course_planner_queue')
+    queue_name = os.environ.get('PLANNER_QUEUE', 'course_planner_queue')
+    channel.queue_declare(queue=queue_name)
     channel.basic_qos(prefetch_count=1)
-    channel.basic_consume(queue='course_planner_queue', on_message_callback=on_consume)
-    print("Waiting for messages...")
+    channel.basic_consume(queue=queue_name, on_message_callback=on_consume)
+    print(f"Waiting for messages on {queue_name}...")
     channel.start_consuming()
 
 if __name__ == "__main__":

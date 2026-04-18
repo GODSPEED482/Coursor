@@ -13,6 +13,9 @@ if args.model:
 if args.api_key:
     os.environ["GOOGLE_API_KEY"] = args.api_key
 
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(__file__), '../rabbitmq.env'))
+
 from workflow import content_injector_workflow
 from planner_utils import Skill
 from youtube_helper import get_youtube_video_details
@@ -68,12 +71,15 @@ def on_consume(ch, method, properties, body):
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
 def main():
-    connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost', heartbeat=0))
+    rabbitmq_url = os.environ.get('RABBITMQ_URL', 'amqp://localhost')
+    print(f"Connecting to RabbitMQ at {os.environ.get('RABBITMQ_HOST', 'localhost')}...")
+    connection = pika.BlockingConnection(pika.URLParameters(rabbitmq_url))
     channel = connection.channel()
-    channel.queue_declare(queue='content_injector_queue')
+    queue_name = os.environ.get('INJECTOR_QUEUE', 'content_injector_queue')
+    channel.queue_declare(queue=queue_name)
     channel.basic_qos(prefetch_count=1)
-    channel.basic_consume(queue='content_injector_queue', on_message_callback=on_consume)
-    print("Waiting for messages...")
+    channel.basic_consume(queue=queue_name, on_message_callback=on_consume)
+    print(f"Waiting for messages on {queue_name}...")
     channel.start_consuming()
 
 if __name__ == "__main__":

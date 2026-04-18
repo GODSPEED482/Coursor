@@ -219,7 +219,7 @@ user_input = "Build me a course on Operating Systems."
 # print(response)
 
 # response = course_details_workflow.invoke({
-#      "text": "Build me a course on Operating Systems. I want the course to be moderately difficult, around 7 out of 10. I need to prepare for an upcoming semester exam and I am currently at my 3rd year, B.E., Information Technology at Jadavpur University. I aim to complete the course by 3rd May 2026.",
+#      "text": "Build me a course on DBMS. I want the course to be moderately difficult, around 7 out of 10. I need to prepare for an upcoming semester exam and I am currently at my 3rd year, B.E., Information Technology at Jadavpur University. I aim to complete the course by 22nd April 2026.",
 
 #      "course_details_description": str(get_description(CourseDetails))
 

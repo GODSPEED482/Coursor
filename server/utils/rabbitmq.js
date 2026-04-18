@@ -1,17 +1,21 @@
 const amqp = require('amqplib');
 const sessionManager = require('./sessionManager');
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../rabbitmq.env') });
 
 class RabbitMQManager {
     constructor() {
         this.connection = null;
         this.channel = null;
         this.logChannel = null;
-        this.replyQueue = 'server_reply_queue';
-        this.logQueue = 'server_log_queue';
+        this.replyQueue = process.env.REPLY_QUEUE || 'server_reply_queue';
+        this.logQueue = process.env.LOG_QUEUE || 'server_log_queue';
     }
 
     async init() {
-        this.connection = await amqp.connect('amqp://localhost');
+        const url = process.env.RABBITMQ_URL || 'amqp://localhost';
+        console.log(`[RabbitMQManager] Connecting to RabbitMQ at ${process.env.RABBITMQ_HOST || 'localhost'}...`);
+        this.connection = await amqp.connect(url);
         this.channel = await this.connection.createChannel();
         this.logChannel = await this.connection.createChannel();
 
@@ -20,9 +24,9 @@ class RabbitMQManager {
         await this.logChannel.assertQueue(this.logQueue, { durable: false, autoDelete: true });
 
         // Declare queues we need to publish to
-        await this.channel.assertQueue('course_details_initializer_queue', { durable: false });
-        await this.channel.assertQueue('course_details_finalizer_queue', { durable: false });
-        await this.channel.assertQueue('course_planner_queue', { durable: false });
+        await this.channel.assertQueue(process.env.INITIALIZER_QUEUE || 'course_details_initializer_queue', { durable: false });
+        await this.channel.assertQueue(process.env.FINALIZER_QUEUE || 'course_details_finalizer_queue', { durable: false });
+        await this.channel.assertQueue(process.env.PLANNER_QUEUE || 'course_planner_queue', { durable: false });
 
         // Set up consumers
         this.channel.consume(this.replyQueue, (msg) => this.onResponse(msg), { noAck: true });
@@ -78,7 +82,7 @@ class RabbitMQManager {
     async sendToInitializer(sessionId, text) {
         const payload = JSON.stringify({ text });
         
-        const ok = this.channel.sendToQueue('course_details_initializer_queue', Buffer.from(payload), {
+        const ok = this.channel.sendToQueue(process.env.INITIALIZER_QUEUE || 'course_details_initializer_queue', Buffer.from(payload), {
             messageId: sessionId,
             replyTo: this.replyQueue,
             headers: {
@@ -97,7 +101,7 @@ class RabbitMQManager {
         });
         
         // Finalizer preserves message properties it receives, so we send our properties
-        const ok = this.channel.sendToQueue('course_details_finalizer_queue', Buffer.from(payload), {
+        const ok = this.channel.sendToQueue(process.env.FINALIZER_QUEUE || 'course_details_finalizer_queue', Buffer.from(payload), {
             messageId: sessionId,
             replyTo: this.replyQueue,
             headers: {
