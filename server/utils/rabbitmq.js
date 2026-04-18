@@ -13,26 +13,60 @@ class RabbitMQManager {
     }
 
     async init() {
-        const url = process.env.RABBITMQ_URL || 'amqp://localhost';
-        console.log(`[RabbitMQManager] Connecting to RabbitMQ at ${process.env.RABBITMQ_HOST || 'localhost'}...`);
-        this.connection = await amqp.connect(url);
-        this.channel = await this.connection.createChannel();
-        this.logChannel = await this.connection.createChannel();
+        if (this.isConnecting) return;
+        this.isConnecting = true;
 
-        // Declare our central queues
-        await this.channel.assertQueue(this.replyQueue, { durable: false, autoDelete: true });
-        await this.logChannel.assertQueue(this.logQueue, { durable: false, autoDelete: true });
+        try {
+            const url = process.env.RABBITMQ_URL || 'amqp://localhost';
+            console.log(`[RabbitMQManager] Connecting to RabbitMQ at ${process.env.RABBITMQ_HOST || 'localhost'}...`);
+            
+            this.connection = await amqp.connect(url);
+            this.isConnecting = false;
 
-        // Declare queues we need to publish to
-        await this.channel.assertQueue(process.env.INITIALIZER_QUEUE || 'course_details_initializer_queue', { durable: false });
-        await this.channel.assertQueue(process.env.FINALIZER_QUEUE || 'course_details_finalizer_queue', { durable: false });
-        await this.channel.assertQueue(process.env.PLANNER_QUEUE || 'course_planner_queue', { durable: false });
+            // Handle connection errors/closure
+            this.connection.on('error', (err) => {
+                console.error('[RabbitMQManager] Connection error:', err.message);
+                if (err.message !== 'Connection closing') {
+                    this.handleDisconnect();
+                }
+            });
 
-        // Set up consumers
-        this.channel.consume(this.replyQueue, (msg) => this.onResponse(msg), { noAck: true });
-        this.logChannel.consume(this.logQueue, (msg) => this.onLog(msg), { noAck: true });
+            this.connection.on('close', () => {
+                console.warn('[RabbitMQManager] Connection closed.');
+                this.handleDisconnect();
+            });
 
-        console.log('[RabbitMQManager] Initialized central reply/log queues.');
+            this.channel = await this.connection.createChannel();
+            this.logChannel = await this.connection.createChannel();
+
+            this.channel.on('error', (err) => console.error('[RabbitMQManager] Channel error:', err.message));
+            this.logChannel.on('error', (err) => console.error('[RabbitMQManager] LogChannel error:', err.message));
+
+            // Declare our central queues
+            await this.channel.assertQueue(this.replyQueue, { durable: false, autoDelete: true });
+            await this.logChannel.assertQueue(this.logQueue, { durable: false, autoDelete: true });
+
+            // Declare queues we need to publish to
+            await this.channel.assertQueue(process.env.INITIALIZER_QUEUE || 'course_details_initializer_queue', { durable: false });
+            await this.channel.assertQueue(process.env.FINALIZER_QUEUE || 'course_details_finalizer_queue', { durable: false });
+            await this.channel.assertQueue(process.env.PLANNER_QUEUE || 'course_planner_queue', { durable: false });
+
+            // Set up consumers
+            this.channel.consume(this.replyQueue, (msg) => this.onResponse(msg), { noAck: true });
+            this.logChannel.consume(this.logQueue, (msg) => this.onLog(msg), { noAck: true });
+
+            console.log('[RabbitMQManager] Initialized central reply/log queues.');
+        } catch (err) {
+            this.isConnecting = false;
+            console.error('[RabbitMQManager] Failed to connect:', err.message);
+            this.handleDisconnect();
+        }
+    }
+
+    handleDisconnect() {
+        console.log('[RabbitMQManager] Attempting to reconnect in 5s...');
+        if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
+        this.reconnectTimeout = setTimeout(() => this.init(), 5000);
     }
 
     onResponse(msg) {
