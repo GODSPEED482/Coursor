@@ -10,9 +10,9 @@ const Course = require('./models/course.model');
 
 const app = express();
 app.use(cors({
-  origin: '*',
-  methods: '*',
-  allowedHeaders: '*'
+    origin: '*',
+    methods: '*',
+    allowedHeaders: '*'
 }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -32,7 +32,7 @@ wss.on('connection', (ws) => {
         try {
             const messageString = isBinary ? message : message.toString();
             const data = JSON.parse(messageString);
-            
+
             // Handle initialization/handshake
             if (data.action === 'init_session') {
                 sessionId = data.sessionId;
@@ -57,13 +57,13 @@ wss.on('connection', (ws) => {
                         const existingCourse = await Course.findById(sessionId);
                         if (existingCourse) {
                             console.log(`[Server] Course ${sessionId} already exists in DB. Rehydrating client.`);
-                            ws.send(JSON.stringify({ 
-                                type: 'rehydrate', 
+                            ws.send(JSON.stringify({
+                                type: 'rehydrate',
                                 data: {
                                     coursePlan: existingCourse.coursePlan,
                                     skillsMap: existingCourse.skillsMap,
                                     title: existingCourse.title
-                                } 
+                                }
                             }));
                             return;
                         }
@@ -71,7 +71,7 @@ wss.on('connection', (ws) => {
                         if (data.text !== 'RECONNECT') {
                             await rabbitMQManager.sendToInitializer(sessionId, data.text);
                         } else {
-                             console.log(`[Server] Session ${sessionId} reconnected. Pipeline already in progress.`);
+                            console.log(`[Server] Session ${sessionId} reconnected. Pipeline already in progress.`);
                         }
                     } else {
                         ws.send(JSON.stringify({ type: 'error', message: 'Missing "text" field in start_course request' }));
