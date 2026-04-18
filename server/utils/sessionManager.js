@@ -5,12 +5,15 @@ class SessionManager {
         this.sessions = new Map();
     }
 
-    addSession(ws) {
-        const sessionId = uuidv4();
+    addSession(ws, providedSessionId = null) {
+        const sessionId = providedSessionId || uuidv4();
         this.sessions.set(sessionId, ws);
         
         ws.on('close', () => {
-            this.removeSession(sessionId);
+            console.log(`[SessionManager] WebSocket closed for ${sessionId}. Keeping session mapping for potential reconnection.`);
+            // Note: We don't remove it immediately to allow RabbitMQ responses to "wait" 
+            // or we can remove it but the messages will be dropped.
+            // For now, let's keep the user's request: "Once complete, save against session_id"
         });
 
         // Optionally, an error handler

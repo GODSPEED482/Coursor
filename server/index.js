@@ -6,10 +6,12 @@ const WebSocket = require('ws');
 const sessionManager = require('./utils/sessionManager');
 const rabbitMQManager = require('./utils/rabbitmq');
 const connectDB = require('./config/db');
+const Course = require('./models/course.model');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Routes
 app.use('/api/auth', require('./routers/auth.route.js'));
@@ -19,21 +21,54 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 wss.on('connection', (ws) => {
-    const sessionId = sessionManager.addSession(ws);
-    console.log(`[Server] Client connected. Assigned session ID: ${sessionId}`);
+    let sessionId = null;
+    console.log(`[Server] New client connection attempt...`);
 
-    // Send a welcome / initialization message
-    ws.send(JSON.stringify({ type: 'connected', sessionId: sessionId }));
-
-    ws.on('message', async (message) => {
+    ws.on('message', async (message, isBinary) => {
         try {
-            const data = JSON.parse(message);
+            const messageString = isBinary ? message : message.toString();
+            const data = JSON.parse(messageString);
+            
+            // Handle initialization/handshake
+            if (data.action === 'init_session') {
+                sessionId = data.sessionId;
+                sessionManager.addSession(ws, sessionId);
+                console.log(`[Server] Client joined/reconnected with session ID: ${sessionId}`);
+                ws.send(JSON.stringify({ type: 'connected', sessionId: sessionId }));
+                return;
+            }
+
+            if (!sessionId) {
+                console.warn(`[Server] Missing session ID for message: ${messageString.substring(0, 100)}`);
+                ws.send(JSON.stringify({ type: 'error', message: 'Session not initialized. Send init_session first.' }));
+                return;
+            }
+
             console.log(`[Server] Received from ${sessionId}:`, data);
 
             switch (data.action) {
                 case 'start_course':
                     if (data.text) {
-                        await rabbitMQManager.sendToInitializer(sessionId, data.text);
+                        // Check if course already exists or is in progress
+                        const existingCourse = await Course.findById(sessionId);
+                        if (existingCourse) {
+                            console.log(`[Server] Course ${sessionId} already exists in DB. Rehydrating client.`);
+                            ws.send(JSON.stringify({ 
+                                type: 'rehydrate', 
+                                data: {
+                                    coursePlan: existingCourse.coursePlan,
+                                    skillsMap: existingCourse.skillsMap,
+                                    title: existingCourse.title
+                                } 
+                            }));
+                            return;
+                        }
+
+                        if (data.text !== 'RECONNECT') {
+                            await rabbitMQManager.sendToInitializer(sessionId, data.text);
+                        } else {
+                             console.log(`[Server] Session ${sessionId} reconnected. Pipeline already in progress.`);
+                        }
                     } else {
                         ws.send(JSON.stringify({ type: 'error', message: 'Missing "text" field in start_course request' }));
                     }
@@ -55,7 +90,7 @@ wss.on('connection', (ws) => {
             }
         } catch (err) {
             console.error(`[Server] Error processing message from session ${sessionId}:`, err);
-            ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON payload format.' }));
+            ws.send(JSON.stringify({ type: 'error', message: `Invalid JSON payload format: ${err.message}` }));
         }
     });
 
