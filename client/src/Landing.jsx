@@ -17,7 +17,7 @@ export default function Landing() {
   const fetchHistory = async () => {
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:8080/api/courses', {
+        const res = await fetch('https://coursor-backend.onrender.com/api/courses', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {

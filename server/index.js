@@ -9,7 +9,11 @@ const connectDB = require('./config/db');
 const Course = require('./models/course.model');
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: '*',
+  allowedHeaders: '*'
+}));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
