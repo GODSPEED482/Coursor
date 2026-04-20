@@ -15,6 +15,16 @@ Coursor AI is a next-generation AI-powered course generator that transforms a si
 
 ---
 
+## Demo
+
+https://github.com/user-attachments/assets/decfd55c-4570-4bcb-81aa-0838dbb4a743
+
+---
+
+
+
+
+
 ## System Architecture
 
 ![System Architecture](public/arch.svg)
