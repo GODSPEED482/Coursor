@@ -17,7 +17,7 @@ Coursor AI is a next-generation AI-powered course generator that transforms a si
 
 ## System Architecture
 
-<iframe src="./public/arch.svg" width="100%" height="600px" style="border:none; border-radius: 8px; background: #f9f9f9;" scrolling="yes"></iframe>
+![System Architecture](public/arch.svg)
 
 Coursor AI is built on a **Decoupled Microservices Architecture**, utilizing WebSockets for real-time frontend updates and RabbitMQ for asynchronous worker orchestration.
 
